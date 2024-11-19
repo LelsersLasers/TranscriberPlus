@@ -2,9 +2,11 @@ import whisper
 
 def transcribe_audio(audio_file):
     model = whisper.load_model("tiny.en")
-    result = model.transcribe(audio_file)
-    return result["text"]
+    result = model.transcribe(audio_file, word_timestamps=True, verbose=True)
+    return result
 
 audio_file = "audio.wav"
-transcription = transcribe_audio(audio_file)
-print("Transcription:\n", transcription)
+res = transcribe_audio(audio_file)
+
+text = res["text"]
+print("Transcription:\n", text)
