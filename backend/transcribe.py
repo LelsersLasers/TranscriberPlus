@@ -1,4 +1,4 @@
-import whisper
+import whisper # type: ignore[import]
 
 def transcribe_audio(audio_filename, model_name):
     model = whisper.load_model(model_name)
