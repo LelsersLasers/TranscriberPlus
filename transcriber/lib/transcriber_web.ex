@@ -20,8 +20,6 @@ defmodule TranscriberWeb do
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 
   def router do
-    IO.puts(" ")
-
     quote do
       use Phoenix.Router, helpers: false
 
