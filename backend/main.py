@@ -1,6 +1,6 @@
 import os
 import flask
-import flask_cors
+import flask_cors # type: ignore[import]
 
 app = flask.Flask(__name__, static_folder="../frontend/public")
 
