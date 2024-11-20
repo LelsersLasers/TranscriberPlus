@@ -1,6 +1,23 @@
 <script>
 	export let api;
 
+	let showTimestamps = false;
+
+	let loading = false;
+	let loadingText = "Loading";
+	setInterval(() => {
+		if (loading) {
+			loadingText += ".";
+			const maxLen = "Loading...".length;
+			if (loadingText.length > maxLen) {
+				loadingText = "Loading";
+			}
+		}
+	}, 500);
+
+	let results = null; // { text: string, with_timestamps: string }
+
+
 	let file;
 
 	async function uploadFile() {
@@ -13,30 +30,40 @@
         formData.append("file", file);
 
         try {
-            const response = await fetch(api + "/upload/", {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                alert(`Error: ${errorData.error}`);
-                return;
-            }
-
-            const data = await response.json();
-            console.log(data);
+			loading = true;
+			fetch(api + "/upload/", {
+				method: "POST",
+				body: formData,
+			})
+				.then((response) => response.json())
+				.then((data) => {
+					console.log(data);
+					results = data;
+					loading = false;
+				})
+				.catch((error) => {
+					console.error("Error uploading file:", error);
+					results = {
+						text: "Error uploading file",
+						with_timestamps: "Error uploading file",
+					};
+					loading = false;
+				});
         } catch (error) {
             console.error("Error uploading file:", error);
+			results = {
+				text: "Error uploading file",
+				with_timestamps: "Error uploading file",
+			}
+			loading = false;
         }
     }
 </script>
 
 
+<h1>Transcriber</h1>
 
-
-
-<h1>File Upload</h1>
+<h2>File Upload</h2>
 <form on:submit|preventDefault={uploadFile}>
 	<input
 		type="file"
@@ -47,8 +74,19 @@
 </form>
 
 
+<h2>Result</h2>
+<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
+<label for="showTimestamps">Show timestamps</label>
 
+{#if loading}
+	<p>{loadingText}</p>
+{:else if results}
+	{#if showTimestamps}
+		{@html results.with_timestamps}
+	{:else}
+		<p>{results.text}</p>
+	{/if}
+{/if}
 
+<br />
 
-<style>
-</style>

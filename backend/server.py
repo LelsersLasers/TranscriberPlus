@@ -3,6 +3,7 @@ import subprocess
 
 import flask
 import flask_cors # type: ignore[import]
+import uuid
 
 SVELTE_DIR = "../frontend/public"
 UPLOAD_DIR = "./temp"
@@ -16,6 +17,17 @@ def get_file_extension(filename):
 
 def allowed_file(filename):
 	return '.' in filename and get_file_extension(filename) in ALLOWED_EXTENSIONS
+
+def format_time(seconds):
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    
+    if hours > 0:
+        return f"{int(hours)}:{int(minutes):02}:{seconds:04.1f}"
+    elif minutes > 0:
+        return f"{int(minutes)}:{seconds:04.1f}"
+    else:
+        return f"{seconds:.1f}"
 
 
 def run_server():
@@ -39,7 +51,9 @@ def run_server():
 		if not allowed_file(file.filename):
 			return flask.jsonify({"error": "Invalid file type"})
 		
-		filename = file.filename
+		input_filename = file.filename
+		base = uuid.uuid4()
+		filename = f"{base}.{get_file_extension(input_filename)}"
 
 		os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -47,13 +61,10 @@ def run_server():
 		file.save(filepath)
 
 		if get_file_extension(filename) == "mp4":
-			print("Converting mp4 to wav")
-
-			# ffmpeg -i input.mp4 -q:a 0 -map a audio.wav
-			new_filename = filename.rsplit(".", 1)[0] + ".wav"
+			new_filename = f"{base}.wav"
 			new_filepath = os.path.join(UPLOAD_DIR, new_filename)
 
-			command = f"ffmpeg -i {filepath} -q:a 0 -map a {new_filepath}".split()
+			command = f"ffmpeg -v 0 -i {filepath} -q:a 0 -map a {new_filepath}".split()
 			subprocess.run(command)
 			
 			os.remove(filepath)
@@ -67,7 +78,18 @@ def run_server():
 
 		os.remove(filepath)
 
-		return flask.jsonify(result)
+		text = result["text"]
+		with_timestamps = ""
+		for s in result["segments"]:
+			start = format_time(s["start"])
+			with_timestamps += f"[{start}] {s['text'].strip()} <br />"
+
+		data = {
+			"text": text,
+			"with_timestamps": with_timestamps
+		}
+
+		return flask.jsonify(data)
 
 
 	app.run(port=5000, debug=True)
