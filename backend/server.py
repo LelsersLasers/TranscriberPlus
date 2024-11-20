@@ -31,8 +31,6 @@ def run_server():
 
 	@app.route("/upload/", methods=["POST"])
 	def upload():
-		print("Got request")
-
 		file = flask.request.files["file"]
 		
 		if not file:
@@ -43,14 +41,10 @@ def run_server():
 		
 		filename = file.filename
 
-		print("Got file:", filename)
-
 		os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 		filepath = os.path.join(UPLOAD_DIR, filename)
 		file.save(filepath)
-
-		print("Saved file to:", filepath)
 
 		if get_file_extension(filename) == "mp4":
 			print("Converting mp4 to wav")
@@ -67,18 +61,11 @@ def run_server():
 			filename = new_filename
 			filepath = new_filepath
 
-			print("Converted mp4 to wav")
 
-
-		print("Transcribing audio")
 		# model_name = flask.request.form.get("model_name", "tiny.en")
 		result = transcribe.transcribe_audio(filepath, "tiny.en")
 
-		print("Transcription:", result)
-
 		os.remove(filepath)
-
-		print("Removed file")
 
 		return flask.jsonify(result)
 
