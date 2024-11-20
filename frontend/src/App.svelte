@@ -1,30 +1,54 @@
 <script>
-	export let name;
+	export let api;
+
+	let file;
+
+	async function uploadFile() {
+        if (!file) {
+            alert("Please select a file.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch(api + "/upload/", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                alert(`Error: ${errorData.error}`);
+                return;
+            }
+
+            const data = await response.json();
+            console.log(data);
+        } catch (error) {
+            console.error("Error uploading file:", error);
+        }
+    }
 </script>
 
-<main>
-	<h1>Hello {name}!</h1>
-	<p>Visit the <a href="https://svelte.dev/tutorial">Svelte tutorial</a> to learn how to build Svelte apps.</p>
-</main>
+
+
+
+
+<h1>File Upload</h1>
+<form on:submit|preventDefault={uploadFile}>
+	<input
+		type="file"
+		accept=".mp3,.mp4,.wav"
+		on:change={(e) => (file = e.target.files[0])}
+	/>
+	<button type="submit">Upload</button>
+</form>
+
+
+
+
 
 <style>
-	main {
-		text-align: center;
-		padding: 1em;
-		max-width: 240px;
-		margin: 0 auto;
-	}
-
-	h1 {
-		color: #ff3e00;
-		text-transform: uppercase;
-		font-size: 4em;
-		font-weight: 100;
-	}
-
-	@media (min-width: 640px) {
-		main {
-			max-width: none;
-		}
-	}
 </style>
