@@ -24,9 +24,25 @@ MODEL_NAME = "tiny.en"
 class TranscriptionState:
 	INIT         = 0
 	DOWNLOADED   = 1
-	CONVERTED    = 2
-	TRANSCRIBING = 3
-	TRANSCRIBED  = 4
+	CONVERTING   = 2
+	CONVERTED    = 3
+	TRANSCRIBING = 4
+	TRANSCRIBED  = 5
+
+	@staticmethod
+	def to_str(state: int):
+		if state == TranscriptionState.INIT:
+			return "Pending"
+		elif state == TranscriptionState.DOWNLOADED:
+			return "Downloaded"
+		elif state == TranscriptionState.CONVERTING:
+			return "Converting to WAV"
+		elif state == TranscriptionState.CONVERTED:
+			return "Waiting to transcribe"
+		elif state == TranscriptionState.TRANSCRIBING:
+			return "Transcribing"
+		elif state == TranscriptionState.TRANSCRIBED:
+			return "Transcribed"
 
 class Transcription:
 	def __init__(self, filename: str):
@@ -77,11 +93,7 @@ def convert(trans: Transcription):
 	inc_process_loop_count()
 
 def transcribe(trans: Transcription):
-	with currently_transcribing_lock:
-		global currently_transcribing
-		currently_transcribing = True
-
-	trans.state = TranscriptionState.TRANSCRIBING
+	global currently_transcribing
 
 	filename = f"{trans.base}.{trans.extension}"
 	filepath = os.path.join(UPLOAD_DIR, filename)
@@ -113,22 +125,37 @@ def process():
 		local_process_loop_count = process_loop_count
 	
 	while local_process_loop_count > 0:
+		with currently_transcribing_lock:
+			local_currently_transcribing = currently_transcribing
+		
 		with wip_lock:
 			uuids = list(wip_transcriptions.keys())
 			for uuid in uuids:
 				trans = wip_transcriptions[uuid]
+
 				if trans.state == TranscriptionState.TRANSCRIBED:
 					with done_lock:
 						done_transcriptions[uuid] = trans
 					del wip_transcriptions[uuid]
+				
 				if trans.state == TranscriptionState.DOWNLOADED:
+					trans.state = TranscriptionState.CONVERTING
 					t = threading.Thread(target=convert, args=(trans,))
 					t.start()
 
-				with currently_transcribing_lock:
-					if trans.state == TranscriptionState.CONVERTED and not currently_transcribing:
-						t = threading.Thread(target=transcribe, args=(trans,))
-						t.start()
+				if trans.state == TranscriptionState.CONVERTED and not local_currently_transcribing:
+					with currently_transcribing_lock:
+						currently_transcribing = True
+					trans.state = TranscriptionState.TRANSCRIBING
+					t = threading.Thread(target=transcribe, args=(trans,))
+					t.start()
+
+		
+		with currently_transcribing_lock:
+			if local_currently_transcribing != currently_transcribing:
+				with process_loop_count_lock:
+					process_loop_count += 1
+					local_process_loop_count = process_loop_count
 
 		with process_loop_count_lock:
 			process_loop_count -= 1
@@ -174,21 +201,9 @@ def run_server():
 		with wip_lock:
 			for uuid in wip_transcriptions:
 				trans = wip_transcriptions[uuid]
-
-				if trans.state == TranscriptionState.INIT:
-					state = "Pending"
-				elif trans.state == TranscriptionState.DOWNLOADED:
-					state = "Converting to WAV"
-				elif trans.state == TranscriptionState.CONVERTED:
-					state = "Waiting to transcribe"
-				elif trans.state == TranscriptionState.TRANSCRIBING:
-					state = "Transcribing"
-				else:
-					state = "Unknown"
-
 				wip.append({
 					"base": str(uuid),
-					"state": state,
+					"state": TranscriptionState.to_str(trans.state),
 					"filename": trans.original_filename
 				})
 
