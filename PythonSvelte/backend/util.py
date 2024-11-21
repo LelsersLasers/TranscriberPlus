@@ -1,3 +1,5 @@
+import os
+
 def get_file_extension(filename):
 	return filename.rsplit(".", 1)[1].lower()
 
@@ -14,3 +16,8 @@ def format_time(seconds):
         return f"{int(minutes)}:{seconds:04.1f}"
     else:
         return f"{seconds:.1f}"
+    
+def full_clean(d):
+	for filename in os.listdir(d):
+		filepath = os.path.join(d, filename)
+		os.remove(filepath)

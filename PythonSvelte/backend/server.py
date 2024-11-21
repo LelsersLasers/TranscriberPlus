@@ -176,14 +176,6 @@ def inc_process_loop_count():
 
 
 #------------------------------------------------------------------------------#
-def full_clean():
-	for filename in os.listdir(UPLOAD_DIR):
-		filepath = os.path.join(UPLOAD_DIR, filename)
-		os.remove(filepath)
-#------------------------------------------------------------------------------#
-
-
-#------------------------------------------------------------------------------#
 def run_server():
 	app = flask.Flask(__name__, static_folder=SVELTE_DIR)
 	flask_cors.CORS(app)
@@ -256,6 +248,6 @@ def run_server():
 
 #------------------------------------------------------------------------------#
 if __name__ == "__main__":
-	full_clean()
+	util.full_clean(UPLOAD_DIR)
 	run_server()
 #------------------------------------------------------------------------------#
