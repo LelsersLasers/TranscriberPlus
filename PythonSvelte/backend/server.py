@@ -142,10 +142,7 @@ def inc_process_loop_count():
 
 		process_loop_count += 1
 
-		print("Process loop count incremented")
-
 		if not process_thread.is_alive():
-			print("Starting process thread")
 			process_thread = threading.Thread(target=process)
 			process_thread.start()
 #------------------------------------------------------------------------------#
@@ -213,8 +210,6 @@ def run_server():
 
 	@app.route("/upload/", methods=["POST"])
 	def upload():
-		print("upload")
-
 		file = flask.request.files["file"]
 		
 		if not file:
@@ -222,8 +217,6 @@ def run_server():
 		
 		if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
 			return flask.jsonify({"error": "Invalid file type"})
-		
-		print("Valud file")
 		
 		trans = Transcription(file.filename)
 		with wip_lock:
@@ -235,12 +228,9 @@ def run_server():
 		os.makedirs(UPLOAD_DIR, exist_ok=True)
 		file.save(download_filepath)
 
-		print("File saved")
-
 		trans.state = TranscriptionState.DOWNLOADED
 		
 		inc_process_loop_count()
-		print("Process loop count incremented")
 
 		return flask.jsonify({"base": trans.base})
 
