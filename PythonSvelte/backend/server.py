@@ -5,16 +5,159 @@ import flask
 import flask_cors # type: ignore[import]
 import uuid
 
-import transcribe
-import util
+import whisper # type: ignore[import]
 
+import util
+import threading
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
 SVELTE_DIR = "../frontend/public"
 UPLOAD_DIR = "./temp"
 ALLOWED_EXTENSIONS = ["wav", "mp3", "mp4"]
+MODEL_NAME = "tiny.en"
+#------------------------------------------------------------------------------#
 
 
+#------------------------------------------------------------------------------#
+class TranscriptionState:
+	INIT         = 0
+	DOWNLOADED   = 1
+	CONVERTED    = 2
+	TRANSCRIBING = 3
+	TRANSCRIBED  = 4
+
+class Transcription:
+	def __init__(self, filename: str):
+		self.filename = filename
+		self.base = uuid.uuid4()
+		self.state = TranscriptionState.INIT
+
+		self.text = ""
+		self.with_timestamps = ""
+#------------------------------------------------------------------------------#
 
 
+#------------------------------------------------------------------------------#
+wip_lock = threading.Lock()
+wip_transcriptions: dict[uuid.UUID, Transcription] = {}
+
+done_lock = threading.Lock()
+done_transcriptions: dict[uuid.UUID, Transcription] = {}
+
+currently_transcribing_lock = threading.Lock()
+currently_transcribing = False
+
+process_thread: threading.Thread = threading.Thread()
+process_loop_count_lock = threading.Lock()
+process_loop_count = 0
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
+def convert(trans: Transcription):
+	if util.get_file_extension(trans.filename) == "mp4":
+		new_filename = f"{trans.base}.wav"
+		new_filepath = os.path.join(UPLOAD_DIR, new_filename)
+
+		download_filename = f"{trans.base}.{util.get_file_extension(trans.filename)}"
+		download_filepath = os.path.join(UPLOAD_DIR, download_filename)
+
+		command = f"ffmpeg -v 0 -i {download_filepath} -q:a 0 -map a {new_filepath}".split()
+		subprocess.run(command)
+
+		os.remove(download_filepath)
+		trans.filename = new_filename
+
+	trans.state = TranscriptionState.CONVERTED
+
+	inc_process_loop_count()
+
+def transcribe(trans: Transcription):
+	with currently_transcribing_lock:
+		global currently_transcribing
+		currently_transcribing = True
+
+	trans.state = TranscriptionState.TRANSCRIBING
+
+	filename = f"{trans.base}.{util.get_file_extension(trans.filename)}"
+	filepath = os.path.join(UPLOAD_DIR, filename)
+
+	model = whisper.load_model(MODEL_NAME)
+	result = model.transcribe(filepath, verbose=False)
+
+	os.remove(filepath)
+
+	trans.text = result["text"]
+	trans.with_timestamps = ""
+	for s in result["segments"]:
+		start = util.format_time(s["start"])
+		trans.with_timestamps += f"[{start}] {s['text'].strip()} <br />"
+
+	trans.state = TranscriptionState.TRANSCRIBED
+
+	with currently_transcribing_lock:
+		currently_transcribing = False
+
+	inc_process_loop_count()
+
+
+def process():
+	global process_loop_count
+	global currently_transcribing
+
+	with process_loop_count_lock:
+		local_process_loop_count = process_loop_count
+	
+	while local_process_loop_count > 0:
+		with wip_lock:
+			uuids = list(wip_transcriptions.keys())
+			for uuid in uuids:
+				trans = wip_transcriptions[uuid]
+				if trans.state == TranscriptionState.TRANSCRIBED:
+					with done_lock:
+						done_transcriptions[uuid] = trans
+					del wip_transcriptions[uuid]
+				if trans.state == TranscriptionState.DOWNLOADED:
+					t = threading.Thread(target=convert, args=(trans,))
+					t.start()
+
+				with currently_transcribing_lock:
+					if trans.state == TranscriptionState.CONVERTED and not currently_transcribing:
+						t = threading.Thread(target=transcribe, args=(trans,))
+						t.start()
+
+		with process_loop_count_lock:
+			process_loop_count -= 1
+			local_process_loop_count = process_loop_count
+
+
+def inc_process_loop_count():
+	with process_loop_count_lock:
+		global process_loop_count
+		global process_thread
+
+		process_loop_count += 1
+
+		print("Process loop count incremented")
+
+		if not process_thread.is_alive():
+			print("Starting process thread")
+			process_thread = threading.Thread(target=process)
+			process_thread.start()
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
+def full_clean():
+	for filename in os.listdir(UPLOAD_DIR):
+		filepath = os.path.join(UPLOAD_DIR, filename)
+		os.remove(filepath)
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
 def run_server():
 	app = flask.Flask(__name__, static_folder=SVELTE_DIR)
 	flask_cors.CORS(app)
@@ -25,9 +168,50 @@ def run_server():
 		if path and os.path.exists(os.path.join(app.static_folder, path)):
 			return flask.send_from_directory(app.static_folder, path)
 		return flask.send_from_directory(app.static_folder, 'index.html')
+	
+	@app.route("/status/")
+	def status():
+		wip = [] # [{'base': str, 'state': str, filename: str}, ...]
+		with wip_lock:
+			for uuid in wip_transcriptions:
+				trans = wip_transcriptions[uuid]
+
+				if trans.state == TranscriptionState.INIT:
+					state = "Pending"
+				elif trans.state == TranscriptionState.DOWNLOADED:
+					state = "Converting to WAV"
+				elif trans.state == TranscriptionState.CONVERTED:
+					state = "Waiting to transcribe"
+				elif trans.state == TranscriptionState.TRANSCRIBING:
+					state = "Transcribing"
+				else:
+					state = "Unknown"
+
+				wip.append({
+					"base": str(uuid),
+					"state": state,
+					"filename": trans.filename
+				})
+
+		done = [] # [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
+		with done_lock:
+			for uuid in done_transcriptions:
+				done.append({
+					"base": str(uuid),
+					"text": done_transcriptions[uuid].text,
+					"with_timestamps": done_transcriptions[uuid].with_timestamps,
+					"filename": done_transcriptions[uuid].filename
+				})
+
+		return flask.jsonify({
+			"wip": wip,
+			"done": done
+		})
 
 	@app.route("/upload/", methods=["POST"])
 	def upload():
+		print("upload")
+
 		file = flask.request.files["file"]
 		
 		if not file:
@@ -36,48 +220,34 @@ def run_server():
 		if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
 			return flask.jsonify({"error": "Invalid file type"})
 		
-		input_filename = file.filename
-		base = uuid.uuid4()
-		filename = f"{base}.{util.get_file_extension(input_filename)}"
+		print("Valud file")
+		
+		trans = Transcription(file.filename)
+		with wip_lock:
+			wip_transcriptions[trans.base] = trans
+
+		download_filename = f"{trans.base}.{util.get_file_extension(file.filename)}"
+		download_filepath = os.path.join(UPLOAD_DIR, download_filename)
 
 		os.makedirs(UPLOAD_DIR, exist_ok=True)
+		file.save(download_filepath)
 
-		filepath = os.path.join(UPLOAD_DIR, filename)
-		file.save(filepath)
+		print("File saved")
 
-		if util.get_file_extension(filename) == "mp4":
-			new_filename = f"{base}.wav"
-			new_filepath = os.path.join(UPLOAD_DIR, new_filename)
+		trans.state = TranscriptionState.DOWNLOADED
+		
+		inc_process_loop_count()
+		print("Process loop count incremented")
 
-			command = f"ffmpeg -v 0 -i {filepath} -q:a 0 -map a {new_filepath}".split()
-			subprocess.run(command)
-			
-			os.remove(filepath)
-
-			filename = new_filename
-			filepath = new_filepath
-
-
-		# model_name = flask.request.form.get("model_name", "tiny.en")
-		result = transcribe.transcribe_audio(filepath, "tiny.en")
-
-		os.remove(filepath)
-
-		text = result["text"]
-		with_timestamps = ""
-		for s in result["segments"]:
-			start = util.format_time(s["start"])
-			with_timestamps += f"[{start}] {s['text'].strip()} <br />"
-
-		data = {
-			"text": text,
-			"with_timestamps": with_timestamps
-		}
-
-		return flask.jsonify(data)
+		return flask.jsonify({"base": trans.base})
 
 
 	app.run(port=5000, debug=True)
+#------------------------------------------------------------------------------#
 
+
+#------------------------------------------------------------------------------#
 if __name__ == "__main__":
+	full_clean()
 	run_server()
+#------------------------------------------------------------------------------#

@@ -3,19 +3,22 @@
 
 	let showTimestamps = false;
 
-	let loading = false;
-	let loadingText = "Loading";
-	setInterval(() => {
-		if (loading) {
-			loadingText += ".";
-			const maxLen = "Loading...".length;
-			if (loadingText.length > maxLen) {
-				loadingText = "Loading";
-			}
-		}
-	}, 500);
+	let results = {
+		"wip": [],  // [{'base': str, 'state': str, filename: str}, ...]
+		"done": [], // [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
+	}
+	let selected = null;
 
-	let results = null; // { text: string, with_timestamps: string }
+	setInterval(() => {
+		fetch(api + "/status/")
+			.then((response) => response.json())
+			.then((data) => {
+				results = data;
+			})
+			.catch((error) => {
+				console.error("Error fetching status:", error);
+			});
+	}, 500);
 
 
 	let file;
@@ -30,32 +33,12 @@
         formData.append("file", file);
 
         try {
-			loading = true;
 			fetch(api + "/upload/", {
 				method: "POST",
 				body: formData,
 			})
-				.then((response) => response.json())
-				.then((data) => {
-					console.log(data);
-					results = data;
-					loading = false;
-				})
-				.catch((error) => {
-					console.error("Error uploading file:", error);
-					results = {
-						text: "Error uploading file",
-						with_timestamps: "Error uploading file",
-					};
-					loading = false;
-				});
         } catch (error) {
             console.error("Error uploading file:", error);
-			results = {
-				text: "Error uploading file",
-				with_timestamps: "Error uploading file",
-			}
-			loading = false;
         }
     }
 </script>
@@ -73,18 +56,34 @@
 	<button type="submit">Upload</button>
 </form>
 
+<h2>Status</h2>
 
-<h2>Result</h2>
+<h3>WIP</h3>
+<ul>
+	{#each results.wip as item (item.base)}
+		<li>{item.filename} - {item.state} ({item.base})</li>
+	{/each}
+</ul>
+
+<h3>Done</h3>
+<ul>
+	{#each results.done as item (item.base)}
+		<li>
+			<button on:click={() => selected = item.base}>{item.filename}</button>
+		</li>
+	{/each}
+</ul>
+
+
+<h2>Text</h2>
 <input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
 <label for="showTimestamps">Show timestamps</label>
 
-{#if loading}
-	<p>{loadingText}</p>
-{:else if results}
+{#if selected}
 	{#if showTimestamps}
-		{@html results.with_timestamps}
+		{@html results.done.find((item) => item.base === selected).with_timestamps}
 	{:else}
-		<p>{results.text}</p>
+		<p>{@html results.done.find((item) => item.base === selected).text}</p>
 	{/if}
 {/if}
 
