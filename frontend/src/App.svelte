@@ -1,3 +1,7 @@
+<!-- <svelte:head>
+	
+</svelte:head> -->
+
 <script>
 	export let api;
 
@@ -6,19 +10,28 @@
 	let results = {
 		"wip": [],  // [{'base': str, 'state': str, filename: str}, ...]
 		"done": [], // [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
-	}
+	};
 	let selected = null;
 
-	setInterval(() => {
-		fetch(api + "/status/")
-			.then((response) => response.json())
-			.then((data) => {
-				results = data;
-			})
-			.catch((error) => {
-				console.error("Error fetching status:", error);
-			});
-	}, 500);
+	document.addEventListener('DOMContentLoaded', () => {
+		const socket = io();
+
+		socket.on('update', (data) => {
+			console.log('update', data);
+			results = data;
+		});
+	});
+
+	// setInterval(() => {
+	// 	fetch(api + "/status/")
+	// 		.then((response) => response.json())
+	// 		.then((data) => {
+	// 			results = data;
+	// 		})
+	// 		.catch((error) => {
+	// 			console.error("Error fetching status:", error);
+	// 		});
+	// }, 500);
 
 
 	let file;

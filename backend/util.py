@@ -21,3 +21,7 @@ def full_clean(d):
 	for filename in os.listdir(d):
 		filepath = os.path.join(d, filename)
 		os.remove(filepath)
+            
+def make_folder(d):
+    if not os.path.exists(d):
+        os.makedirs(d)

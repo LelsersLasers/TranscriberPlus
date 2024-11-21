@@ -3,6 +3,7 @@ import subprocess
 
 import flask
 import flask_cors # type: ignore[import]
+import flask_socketio # type: ignore[import]
 import uuid
 
 import whisper # type: ignore[import]
@@ -74,6 +75,13 @@ process_loop_count = 0
 
 
 #------------------------------------------------------------------------------#
+app = flask.Flask(__name__, static_folder=SVELTE_DIR)
+flask_cors.CORS(app)
+sio = flask_socketio.SocketIO(app, cors_allowed_origins="*")
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
 def convert(trans: Transcription):
 	if trans.extension == "mp4":
 		new_filename = f"{trans.base}.wav"
@@ -89,6 +97,8 @@ def convert(trans: Transcription):
 		trans.extension = "wav"
 
 	trans.state = TranscriptionState.CONVERTED
+
+	emit_update()
 
 	inc_process_loop_count()
 
@@ -111,6 +121,8 @@ def transcribe(trans: Transcription):
 
 	trans.state = TranscriptionState.TRANSCRIBED
 
+	emit_update()
+
 	with currently_transcribing_lock:
 		currently_transcribing = False
 
@@ -132,11 +144,6 @@ def process():
 			uuids = list(wip_transcriptions.keys())
 			for uuid in uuids:
 				trans = wip_transcriptions[uuid]
-
-				if trans.state == TranscriptionState.TRANSCRIBED:
-					with done_lock:
-						done_transcriptions[uuid] = trans
-					del wip_transcriptions[uuid]
 				
 				if trans.state == TranscriptionState.DOWNLOADED:
 					trans.state = TranscriptionState.CONVERTING
@@ -150,6 +157,12 @@ def process():
 					t = threading.Thread(target=transcribe, args=(trans,))
 					t.start()
 
+				if trans.state == TranscriptionState.TRANSCRIBED:
+					with done_lock:
+						done_transcriptions[uuid] = trans
+					del wip_transcriptions[uuid]
+
+		emit_update()
 		
 		with currently_transcribing_lock:
 			if local_currently_transcribing != currently_transcribing:
@@ -176,78 +189,84 @@ def inc_process_loop_count():
 
 
 #------------------------------------------------------------------------------#
-def run_server():
-	app = flask.Flask(__name__, static_folder=SVELTE_DIR)
-	flask_cors.CORS(app)
+util.make_folder(UPLOAD_DIR)
+util.full_clean(UPLOAD_DIR)
 
-	@app.route('/', defaults={'path': ''})
-	@app.route('/<path:path>')
-	def serve(path):
-		if path and os.path.exists(os.path.join(app.static_folder, path)):
-			return flask.send_from_directory(app.static_folder, path)
-		return flask.send_from_directory(app.static_folder, 'index.html')
+def emit_update():
+	wip = [] # [{'base': str, 'state': str, filename: str}, ...]
+	with wip_lock:
+		for uuid in wip_transcriptions:
+			trans = wip_transcriptions[uuid]
+			wip.append({
+				"base": str(uuid),
+				"state": TranscriptionState.to_str(trans.state),
+				"filename": trans.original_filename
+			})
+
+	done = [] # [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
+	with done_lock:
+		for uuid in done_transcriptions:
+			trans = done_transcriptions[uuid]
+			done.append({
+				"base": str(uuid),
+				"text": trans.text,
+				"with_timestamps": trans.with_timestamps,
+				"filename": trans.original_filename
+			})
+
+	sio.emit("update", {
+		"wip": wip,
+		"done": done
+	})
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+	if path and os.path.exists(os.path.join(app.static_folder, path)):
+		return flask.send_from_directory(app.static_folder, path)
+	return flask.send_from_directory(app.static_folder, 'index.html')
+
+@sio.on("connect")
+def connect():
+	print("Client connected")
+	emit_update()
+
+@sio.on("disconnect")
+def disconnect():
+	print("Client disconnected")
+
+@app.route("/upload/", methods=["POST"])
+def upload():
+	file = flask.request.files["file"]
 	
-	@app.route("/status/")
-	def status():
-		wip = [] # [{'base': str, 'state': str, filename: str}, ...]
-		with wip_lock:
-			for uuid in wip_transcriptions:
-				trans = wip_transcriptions[uuid]
-				wip.append({
-					"base": str(uuid),
-					"state": TranscriptionState.to_str(trans.state),
-					"filename": trans.original_filename
-				})
+	if not file:
+		return flask.jsonify({"error": "No file provided"})
+	
+	if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
+		return flask.jsonify({"error": "Invalid file type"})
+	
+	trans = Transcription(file.filename)
+	with wip_lock:
+		wip_transcriptions[trans.base] = trans
 
-		done = [] # [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
-		with done_lock:
-			for uuid in done_transcriptions:
-				trans = done_transcriptions[uuid]
-				done.append({
-					"base": str(uuid),
-					"text": trans.text,
-					"with_timestamps": trans.with_timestamps,
-					"filename": trans.original_filename
-				})
+	emit_update()
 
-		return flask.jsonify({
-			"wip": wip,
-			"done": done
-		})
+	download_filename = f"{trans.base}.{util.get_file_extension(file.filename)}"
+	download_filepath = os.path.join(UPLOAD_DIR, download_filename)
 
-	@app.route("/upload/", methods=["POST"])
-	def upload():
-		file = flask.request.files["file"]
-		
-		if not file:
-			return flask.jsonify({"error": "No file provided"})
-		
-		if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
-			return flask.jsonify({"error": "Invalid file type"})
-		
-		trans = Transcription(file.filename)
-		with wip_lock:
-			wip_transcriptions[trans.base] = trans
+	os.makedirs(UPLOAD_DIR, exist_ok=True)
+	file.save(download_filepath)
 
-		download_filename = f"{trans.base}.{util.get_file_extension(file.filename)}"
-		download_filepath = os.path.join(UPLOAD_DIR, download_filename)
+	trans.state = TranscriptionState.DOWNLOADED
 
-		os.makedirs(UPLOAD_DIR, exist_ok=True)
-		file.save(download_filepath)
+	emit_update()
+	
+	inc_process_loop_count()
 
-		trans.state = TranscriptionState.DOWNLOADED
-		
-		inc_process_loop_count()
-
-		return flask.jsonify({"base": trans.base})
+	return flask.jsonify({"base": trans.base})
 
 
-	app.run(port=5000, debug=True)
-#------------------------------------------------------------------------------#
-
-
-#------------------------------------------------------------------------------#
-if __name__ == "__main__":
-	util.full_clean(UPLOAD_DIR)
-	run_server()
+# app.run(port=5000, debug=True)
+sio.run(app, port=5000, debug=True)
 #------------------------------------------------------------------------------#
