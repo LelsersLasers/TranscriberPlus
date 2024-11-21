@@ -153,6 +153,7 @@ def process():
 				if trans.state == TranscriptionState.CONVERTED and not local_currently_transcribing:
 					with currently_transcribing_lock:
 						currently_transcribing = True
+						local_currently_transcribing = True
 					trans.state = TranscriptionState.TRANSCRIBING
 					t = threading.Thread(target=transcribe, args=(trans,))
 					t.start()
