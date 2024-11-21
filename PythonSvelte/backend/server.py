@@ -30,7 +30,9 @@ class TranscriptionState:
 
 class Transcription:
 	def __init__(self, filename: str):
-		self.filename = filename
+		self.original_filename = filename
+		self.extension = util.get_file_extension(filename)
+
 		self.base = uuid.uuid4()
 		self.state = TranscriptionState.INIT
 
@@ -57,18 +59,18 @@ process_loop_count = 0
 
 #------------------------------------------------------------------------------#
 def convert(trans: Transcription):
-	if util.get_file_extension(trans.filename) == "mp4":
+	if trans.extension == "mp4":
 		new_filename = f"{trans.base}.wav"
 		new_filepath = os.path.join(UPLOAD_DIR, new_filename)
 
-		download_filename = f"{trans.base}.{util.get_file_extension(trans.filename)}"
+		download_filename = f"{trans.base}.{trans.extension}"
 		download_filepath = os.path.join(UPLOAD_DIR, download_filename)
 
 		command = f"ffmpeg -v 0 -i {download_filepath} -q:a 0 -map a {new_filepath}".split()
 		subprocess.run(command)
 
 		os.remove(download_filepath)
-		trans.filename = new_filename
+		trans.extension = "wav"
 
 	trans.state = TranscriptionState.CONVERTED
 
@@ -81,7 +83,7 @@ def transcribe(trans: Transcription):
 
 	trans.state = TranscriptionState.TRANSCRIBING
 
-	filename = f"{trans.base}.{util.get_file_extension(trans.filename)}"
+	filename = f"{trans.base}.{trans.extension}"
 	filepath = os.path.join(UPLOAD_DIR, filename)
 
 	model = whisper.load_model(MODEL_NAME)
@@ -190,17 +192,18 @@ def run_server():
 				wip.append({
 					"base": str(uuid),
 					"state": state,
-					"filename": trans.filename
+					"filename": trans.original_filename
 				})
 
 		done = [] # [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
 		with done_lock:
 			for uuid in done_transcriptions:
+				trans = done_transcriptions[uuid]
 				done.append({
 					"base": str(uuid),
-					"text": done_transcriptions[uuid].text,
-					"with_timestamps": done_transcriptions[uuid].with_timestamps,
-					"filename": done_transcriptions[uuid].filename
+					"text": trans.text,
+					"with_timestamps": trans.with_timestamps,
+					"filename": trans.original_filename
 				})
 
 		return flask.jsonify({
