@@ -5,7 +5,7 @@ import flask
 import flask_cors # type: ignore[import]
 import flask_socketio # type: ignore[import]
 import logging
-import uuid
+import time
 
 import whisper # type: ignore[import]
 
@@ -64,7 +64,7 @@ def convert(base: str):
 		download_filename = f"{trans.base}.{trans.extension}"
 		download_filepath = os.path.join(UPLOAD_DIR, download_filename)
 
-		command = f"ffmpeg -v 0 -i {download_filepath} -q:a 0 -map a {new_filepath}".split()
+		command = f"ffmpeg -v 0 -y -i {download_filepath} -q:a 0 -map a {new_filepath}".split()
 		subprocess.run(command)
 
 		os.remove(download_filepath)
@@ -175,7 +175,7 @@ def inc_process_loop_count():
 		global process_loop_count
 		global process_thread
 
-		process_loop_count += 1
+		process_loop_count = max(1, process_loop_count + 1)
 
 		if not process_thread.is_alive():
 			process_thread = threading.Thread(target=process)
@@ -184,10 +184,17 @@ def inc_process_loop_count():
 
 
 #------------------------------------------------------------------------------#
+init_done = False
+
 def init():
+	global init_done
+
+	if init_done: return
+	init_done = True
+	print("Initializing...")
 	with db_lock:
 		sql.make_table(db)
-		sql.reset_in_progress(db)
+		sql.reset_in_progress(db, UPLOAD_DIR)
 	util.make_folder(UPLOAD_DIR)
 	inc_process_loop_count()
 
@@ -260,6 +267,5 @@ def upload():
 
 
 init()
-# app.run(port=5000, debug=True)
-sio.run(app, port=5000, debug=True)
+sio.run(app, port=5000, debug=False)
 #------------------------------------------------------------------------------#
