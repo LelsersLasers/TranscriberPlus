@@ -64,6 +64,7 @@ class Transcription:
 	@classmethod
 	def from_dict(cls, d: dict)-> 'Transcription':
 		t = cls(d["original_filename"])
+		t.extension = d["extension"]
 		t.base = d["base"]
 		t.state = d["state"]
 		t.text = d["text"]
@@ -79,7 +80,9 @@ class Transcription:
 currently_transcribing_lock = threading.Lock()
 currently_transcribing = False
 
-thread_local_data = threading.local()
+db = sqlite3.connect(DATABASE, detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+db.row_factory = sqlite3.Row
+db_lock = threading.Lock()
 
 process_thread: threading.Thread = threading.Thread()
 process_loop_count_lock = threading.Lock()
@@ -97,23 +100,10 @@ sio = flask_socketio.SocketIO(app, cors_allowed_origins="*")
 
 
 #------------------------------------------------------------------------------#
-# TODO: use a context manager
-def get_connection():
-	if not hasattr(thread_local_data, "db"):
-		thread_local_data.db = sqlite3.connect(DATABASE, detect_types=sqlite3.PARSE_DECLTYPES)
-		thread_local_data.db.row_factory = sqlite3.Row
-	return thread_local_data.db
-
-def close_connection():
-	if hasattr(thread_local_data, "db"):
-		thread_local_data.db.close()
-		del thread_local_data.db
-
 def convert(base: str):
-	db = get_connection()
-	cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
-	trans = Transcription.from_dict(dict(cursor.fetchone()))
-	close_connection()
+	with db_lock:
+		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
+		trans = Transcription.from_dict(dict(cursor.fetchone()))
 
 	if trans.extension == "mp4":
 		new_filename = f"{trans.base}.wav"
@@ -126,25 +116,23 @@ def convert(base: str):
 		subprocess.run(command)
 
 		os.remove(download_filepath)
+		
 		trans.extension = "wav"
 
-		# db = get_connection()
-		# trans.extension = "wav"
-		# db.execute(
-		# 	"UPDATE transcriptions SET extension = ? WHERE base = ?",
-		# 	(trans.extension, trans.base)
-		# )
-		# db.commit()
-		# close_connection()
+		with db_lock:
+			db.execute(
+				"UPDATE transcriptions SET extension = ? WHERE base = ?",
+				(trans.extension, trans.base)
+			)
+			db.commit()
 
-	db = get_connection()
 	trans.state = TranscriptionState.CONVERTED
-	db.execute(
-		"UPDATE transcriptions SET state = ?, extension = ? WHERE base = ?",
-		(trans.state, trans.extension, trans.base)
-	)
-	db.commit()
-	close_connection()
+	with db_lock:
+		db.execute(
+			"UPDATE transcriptions SET state = ? WHERE base = ?",
+			(trans.state, trans.base)
+		)
+		db.commit()
 
 	emit_update()
 
@@ -153,12 +141,9 @@ def convert(base: str):
 def transcribe(base):
 	global currently_transcribing
 
-	db = get_connection()
-	cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
-	trans = Transcription.from_dict(dict(cursor.fetchone()))
-	close_connection()
-
-	print(trans.to_values())
+	with db_lock:
+		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
+		trans = Transcription.from_dict(dict(cursor.fetchone()))
 
 	filename = f"{trans.base}.{trans.extension}"
 	filepath = os.path.join(UPLOAD_DIR, filename)
@@ -176,13 +161,12 @@ def transcribe(base):
 
 	trans.state = TranscriptionState.TRANSCRIBED
 
-	db = get_connection()
-	db.execute(
-		"UPDATE transcriptions SET state = ?, text = ?, with_timestamps = ? WHERE base = ?",
-		(trans.state, trans.text, trans.with_timestamps, trans.base)
-	)
-	db.commit()
-	close_connection()
+	with db_lock:
+		db.execute(
+			"UPDATE transcriptions SET state = ?, text = ?, with_timestamps = ? WHERE base = ?",
+			(trans.state, trans.text, trans.with_timestamps, trans.base)
+		)
+		db.commit()
 
 	emit_update()
 
@@ -203,40 +187,33 @@ def process():
 		with currently_transcribing_lock:
 			local_currently_transcribing = currently_transcribing
 		
-		db = get_connection()
-		cursor = db.execute("SELECT * FROM transcriptions WHERE state < ?", (TranscriptionState.TRANSCRIBED,))
-		transcriptions = [Transcription.from_dict(dict(row)) for row in cursor.fetchall()]
-		close_connection()
+		with db_lock:
+			cursor = db.execute("SELECT * FROM transcriptions WHERE state < ?", (TranscriptionState.TRANSCRIBED,))
+			transcriptions = [Transcription.from_dict(dict(row)) for row in cursor.fetchall()]
 
-		wip = {trans.base: trans for trans in transcriptions}
-		uuids = list(wip.keys())
-		for uuid in uuids:
-			trans = wip[uuid]
-
+		for trans in transcriptions:
 			if trans.state == TranscriptionState.DOWNLOADED:
 				trans.state = TranscriptionState.CONVERTING
-				db = get_connection()
-				db.execute(
-					"UPDATE transcriptions SET state = ? WHERE base = ?",
-					(trans.state, trans.base)
-				)
-				db.commit()
-				close_connection()
+				with db_lock:
+					db.execute(
+						"UPDATE transcriptions SET state = ? WHERE base = ?",
+						(trans.state, trans.base)
+					)
+					db.commit()
 				t = threading.Thread(target=convert, args=(trans.base,))
 				t.start()
 
 			if trans.state == TranscriptionState.CONVERTED and not local_currently_transcribing:
 				with currently_transcribing_lock:
-						currently_transcribing = True
-						local_currently_transcribing = True
+					currently_transcribing = True
+					local_currently_transcribing = True
 				trans.state = TranscriptionState.TRANSCRIBING
-				db = get_connection()
-				db.execute(
-					"UPDATE transcriptions SET state = ? WHERE base = ?",
-					(trans.state, trans.base)
-				)
-				db.commit()
-				close_connection()
+				with db_lock:
+					db.execute(
+						"UPDATE transcriptions SET state = ? WHERE base = ?",
+						(trans.state, trans.base)
+					)
+					db.commit()
 				t = threading.Thread(target=transcribe, args=(trans.base,))
 				t.start()
 
@@ -268,27 +245,19 @@ def inc_process_loop_count():
 
 #------------------------------------------------------------------------------#
 def init():
-	db = get_connection()
-
-	sql.make_table(db)
-	sql.reset_in_progress(db)
-
-	close_connection()
-
+	with db_lock:
+		sql.make_table(db)
+		sql.reset_in_progress(db)
 	util.make_folder(UPLOAD_DIR)
-	
 	inc_process_loop_count()
 
 def emit_update():
-	db = get_connection()
-	
-	cursor = db.execute("SELECT * FROM transcriptions WHERE state < ?", (TranscriptionState.TRANSCRIBED,))
-	wip = [dict(row) for row in cursor.fetchall()]
+	with db_lock:	
+		cursor = db.execute("SELECT * FROM transcriptions WHERE state < ?", (TranscriptionState.TRANSCRIBED,))
+		wip = [dict(row) for row in cursor.fetchall()]
 
-	cursor = db.execute("SELECT * FROM transcriptions WHERE state = ?", (TranscriptionState.TRANSCRIBED,))
-	done = [dict(row) for row in cursor.fetchall()]
-
-	close_connection()
+		cursor = db.execute("SELECT * FROM transcriptions WHERE state = ?", (TranscriptionState.TRANSCRIBED,))
+		done = [dict(row) for row in cursor.fetchall()]
 
 	for l in [wip, done]:
 		for trans in l:
@@ -322,13 +291,12 @@ def upload():
 		return flask.jsonify({"error": "Invalid file type"})
 	
 	trans = Transcription(file.filename)
-	db = get_connection()
-	db.execute(
-		"INSERT INTO transcriptions (base, original_filename, extension, state, text, with_timestamps) VALUES (?, ?, ?, ?, ?, ?)",
-		trans.to_values()
-	)
-	db.commit()
-	close_connection()
+	with db_lock:
+		db.execute(
+			"INSERT INTO transcriptions (base, original_filename, extension, state, text, with_timestamps) VALUES (?, ?, ?, ?, ?, ?)",
+			trans.to_values()
+		)
+		db.commit()
 
 	emit_update()
 
@@ -340,13 +308,12 @@ def upload():
 
 	trans.state = TranscriptionState.DOWNLOADED
 
-	db = get_connection()
-	db.execute(
-		"UPDATE transcriptions SET state = ? WHERE base = ?",
-		(TranscriptionState.DOWNLOADED, trans.base)
-	)
-	db.commit()
-	close_connection()
+	with db_lock:
+		db.execute(
+			"UPDATE transcriptions SET state = ? WHERE base = ?",
+			(TranscriptionState.DOWNLOADED, trans.base)
+		)
+		db.commit()
 
 	emit_update()
 	
