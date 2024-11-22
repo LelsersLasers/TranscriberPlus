@@ -116,7 +116,7 @@ def convert(base: str):
 		subprocess.run(command)
 
 		os.remove(download_filepath)
-		
+
 		trans.extension = "wav"
 
 		with db_lock:
@@ -128,11 +128,7 @@ def convert(base: str):
 
 	trans.state = TranscriptionState.CONVERTED
 	with db_lock:
-		db.execute(
-			"UPDATE transcriptions SET state = ? WHERE base = ?",
-			(trans.state, trans.base)
-		)
-		db.commit()
+		sql.update_state(db, trans.base, trans.state)
 
 	emit_update()
 
@@ -195,11 +191,7 @@ def process():
 			if trans.state == TranscriptionState.DOWNLOADED:
 				trans.state = TranscriptionState.CONVERTING
 				with db_lock:
-					db.execute(
-						"UPDATE transcriptions SET state = ? WHERE base = ?",
-						(trans.state, trans.base)
-					)
-					db.commit()
+					sql.update_state(db, trans.base, trans.state)
 				t = threading.Thread(target=convert, args=(trans.base,))
 				t.start()
 
@@ -209,11 +201,7 @@ def process():
 					local_currently_transcribing = True
 				trans.state = TranscriptionState.TRANSCRIBING
 				with db_lock:
-					db.execute(
-						"UPDATE transcriptions SET state = ? WHERE base = ?",
-						(trans.state, trans.base)
-					)
-					db.commit()
+					sql.update_state(db, trans.base, trans.state)
 				t = threading.Thread(target=transcribe, args=(trans.base,))
 				t.start()
 
@@ -309,10 +297,7 @@ def upload():
 	trans.state = TranscriptionState.DOWNLOADED
 
 	with db_lock:
-		db.execute(
-			"UPDATE transcriptions SET state = ? WHERE base = ?",
-			(TranscriptionState.DOWNLOADED, trans.base)
-		)
+		sql.update_state(db, trans.base, trans.state)
 		db.commit()
 
 	emit_update()

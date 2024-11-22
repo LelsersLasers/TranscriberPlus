@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS transcriptions (
 def make_table(db):
 	db.executescript(CREATE_TABLES)
 
+def update_state(db, base, state):
+	db.execute("UPDATE transcriptions SET state = ? WHERE base = ?", (state, base))
+	db.commit()
+
 def reset_in_progress(db):
 	# CONVERTING -> DOWNLOADED
 	db.execute("UPDATE transcriptions SET state = ? WHERE state = ?", (2, 1))
