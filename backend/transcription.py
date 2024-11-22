@@ -25,7 +25,10 @@ class TranscriptionState:
 			return "Transcribed"
 
 class Transcription:
-	def __init__(self, filename: str):
+	def __init__(self, filename: str, model: str, language: str):
+		self.model = model
+		self.language = language
+
 		self.original_filename = filename
 		self.extension = util.get_file_extension(filename)
 
@@ -37,7 +40,7 @@ class Transcription:
 
 	@classmethod
 	def from_dict(cls, d: dict)-> 'Transcription':
-		t = cls(d["original_filename"])
+		t = cls(d["original_filename"], d["model"], d["language"])
 		t.extension = d["extension"]
 		t.base = d["base"]
 		t.state = d["state"]
@@ -46,4 +49,4 @@ class Transcription:
 		return t
 	
 	def to_values(self)-> tuple:
-		return (self.base, self.original_filename, self.extension, self.state, self.text, self.with_timestamps)
+		return (self.base, self.original_filename, self.model, self.language, self.extension, self.state, self.text, self.with_timestamps)

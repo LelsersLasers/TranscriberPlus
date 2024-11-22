@@ -7,6 +7,8 @@ CREATE_TABLES = """
 CREATE TABLE IF NOT EXISTS transcriptions (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	original_filename TEXT,
+	model TEXT,
+	language TEXT,
 	extension TEXT,
 	base TEXT,
 	state INTEGER,

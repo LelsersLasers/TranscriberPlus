@@ -23,7 +23,6 @@ from transcription import Transcription, TranscriptionState
 SVELTE_DIR = "../frontend/public"
 UPLOAD_DIR = "./temp"
 ALLOWED_EXTENSIONS = ["wav", "mp3", "mp4"]
-MODEL_NAME = "tiny.en"
 DATABASE = "./database.db"
 #------------------------------------------------------------------------------#
 
@@ -96,8 +95,8 @@ def transcribe(base):
 	filename = f"{trans.base}.{trans.extension}"
 	filepath = os.path.join(UPLOAD_DIR, filename)
 
-	model = whisper.load_model(MODEL_NAME)
-	result = model.transcribe(filepath, verbose=False)
+	model = whisper.load_model(trans.model)
+	result = model.transcribe(filepath, language=trans.language, verbose=False)
 
 	os.remove(filepath)
 
@@ -262,18 +261,17 @@ def upload():
 	model = flask.request.form.get("model")
 	language = flask.request.form.get("language")
 
-	print(f"Model: {model}, Language: {language}")
-	
 	if not file:
 		return flask.jsonify({"error": "No file provided"})
 	
 	if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
 		return flask.jsonify({"error": "Invalid file type"})
 	
-	trans = Transcription(file.filename)
+	trans = Transcription(file.filename, model, language)
 	with db_lock:
 		db.execute(
-			"INSERT INTO transcriptions (base, original_filename, extension, state, text, with_timestamps) VALUES (?, ?, ?, ?, ?, ?)",
+			"""INSERT INTO transcriptions (base, original_filename, model, language, extension, state, text, with_timestamps)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
 			trans.to_values()
 		)
 		db.commit()
