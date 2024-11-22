@@ -62,7 +62,9 @@
 <h3>WIP</h3>
 <ul>
 	{#each results.wip as item (item.base)}
-		<li>({item.extension}) {item.original_filename} - {item.state_str} ({item.base})</li>
+		<li>
+			({item.extension}) {item.original_filename} - {item.state_str} ({item.base})
+		</li>
 	{/each}
 </ul>
 
@@ -70,7 +72,7 @@
 <ul>
 	{#each results.done as item (item.base)}
 		<li>
-			<button on:click={() => selected = item.base}>{item.original_filename}</button>
+			{item.original_filename} <button on:click={() => selected = item.base}>View</button>
 		</li>
 	{/each}
 </ul>
