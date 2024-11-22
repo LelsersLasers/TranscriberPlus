@@ -4,12 +4,16 @@ import subprocess
 import flask
 import flask_cors # type: ignore[import]
 import flask_socketio # type: ignore[import]
+import logging
 import uuid
 
 import whisper # type: ignore[import]
 
 import util
 import threading
+
+import sql
+import sqlite3
 #------------------------------------------------------------------------------#
 
 
@@ -18,6 +22,7 @@ SVELTE_DIR = "../frontend/public"
 UPLOAD_DIR = "./temp"
 ALLOWED_EXTENSIONS = ["wav", "mp3", "mp4"]
 MODEL_NAME = "tiny.en"
+DATABASE = "./database.db"
 #------------------------------------------------------------------------------#
 
 
@@ -50,23 +55,31 @@ class Transcription:
 		self.original_filename = filename
 		self.extension = util.get_file_extension(filename)
 
-		self.base = uuid.uuid4()
+		self.base = uuid.uuid4().hex
 		self.state = TranscriptionState.INIT
 
 		self.text = ""
 		self.with_timestamps = ""
+
+	@classmethod
+	def from_dict(cls, d: dict)-> 'Transcription':
+		t = cls(d["original_filename"])
+		t.base = d["base"]
+		t.state = d["state"]
+		t.text = d["text"]
+		t.with_timestamps = d["with_timestamps"]
+		return t
+	
+	def to_values(self)-> tuple:
+		return (self.base, self.original_filename, self.extension, self.state, self.text, self.with_timestamps)
 #------------------------------------------------------------------------------#
 
 
 #------------------------------------------------------------------------------#
-wip_lock = threading.Lock()
-wip_transcriptions: dict[uuid.UUID, Transcription] = {}
-
-done_lock = threading.Lock()
-done_transcriptions: dict[uuid.UUID, Transcription] = {}
-
 currently_transcribing_lock = threading.Lock()
 currently_transcribing = False
+
+thread_local_data = threading.local()
 
 process_thread: threading.Thread = threading.Thread()
 process_loop_count_lock = threading.Lock()
@@ -76,13 +89,32 @@ process_loop_count = 0
 
 #------------------------------------------------------------------------------#
 app = flask.Flask(__name__, static_folder=SVELTE_DIR)
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 flask_cors.CORS(app)
 sio = flask_socketio.SocketIO(app, cors_allowed_origins="*")
 #------------------------------------------------------------------------------#
 
 
 #------------------------------------------------------------------------------#
-def convert(trans: Transcription):
+# TODO: use a context manager
+def get_connection():
+	if not hasattr(thread_local_data, "db"):
+		thread_local_data.db = sqlite3.connect(DATABASE, detect_types=sqlite3.PARSE_DECLTYPES)
+		thread_local_data.db.row_factory = sqlite3.Row
+	return thread_local_data.db
+
+def close_connection():
+	if hasattr(thread_local_data, "db"):
+		thread_local_data.db.close()
+		del thread_local_data.db
+
+def convert(base: str):
+	db = get_connection()
+	cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
+	trans = Transcription.from_dict(dict(cursor.fetchone()))
+	close_connection()
+
 	if trans.extension == "mp4":
 		new_filename = f"{trans.base}.wav"
 		new_filepath = os.path.join(UPLOAD_DIR, new_filename)
@@ -96,14 +128,37 @@ def convert(trans: Transcription):
 		os.remove(download_filepath)
 		trans.extension = "wav"
 
+		# db = get_connection()
+		# trans.extension = "wav"
+		# db.execute(
+		# 	"UPDATE transcriptions SET extension = ? WHERE base = ?",
+		# 	(trans.extension, trans.base)
+		# )
+		# db.commit()
+		# close_connection()
+
+	db = get_connection()
 	trans.state = TranscriptionState.CONVERTED
+	db.execute(
+		"UPDATE transcriptions SET state = ?, extension = ? WHERE base = ?",
+		(trans.state, trans.extension, trans.base)
+	)
+	db.commit()
+	close_connection()
 
 	emit_update()
 
 	inc_process_loop_count()
 
-def transcribe(trans: Transcription):
+def transcribe(base):
 	global currently_transcribing
+
+	db = get_connection()
+	cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
+	trans = Transcription.from_dict(dict(cursor.fetchone()))
+	close_connection()
+
+	print(trans.to_values())
 
 	filename = f"{trans.base}.{trans.extension}"
 	filepath = os.path.join(UPLOAD_DIR, filename)
@@ -120,6 +175,14 @@ def transcribe(trans: Transcription):
 		trans.with_timestamps += f"[{start}] {s['text'].strip()} <br />"
 
 	trans.state = TranscriptionState.TRANSCRIBED
+
+	db = get_connection()
+	db.execute(
+		"UPDATE transcriptions SET state = ?, text = ?, with_timestamps = ? WHERE base = ?",
+		(trans.state, trans.text, trans.with_timestamps, trans.base)
+	)
+	db.commit()
+	close_connection()
 
 	emit_update()
 
@@ -140,28 +203,42 @@ def process():
 		with currently_transcribing_lock:
 			local_currently_transcribing = currently_transcribing
 		
-		with wip_lock:
-			uuids = list(wip_transcriptions.keys())
-			for uuid in uuids:
-				trans = wip_transcriptions[uuid]
-				
-				if trans.state == TranscriptionState.DOWNLOADED:
-					trans.state = TranscriptionState.CONVERTING
-					t = threading.Thread(target=convert, args=(trans,))
-					t.start()
+		db = get_connection()
+		cursor = db.execute("SELECT * FROM transcriptions WHERE state < ?", (TranscriptionState.TRANSCRIBED,))
+		transcriptions = [Transcription.from_dict(dict(row)) for row in cursor.fetchall()]
+		close_connection()
 
-				if trans.state == TranscriptionState.CONVERTED and not local_currently_transcribing:
-					with currently_transcribing_lock:
+		wip = {trans.base: trans for trans in transcriptions}
+		uuids = list(wip.keys())
+		for uuid in uuids:
+			trans = wip[uuid]
+
+			if trans.state == TranscriptionState.DOWNLOADED:
+				trans.state = TranscriptionState.CONVERTING
+				db = get_connection()
+				db.execute(
+					"UPDATE transcriptions SET state = ? WHERE base = ?",
+					(trans.state, trans.base)
+				)
+				db.commit()
+				close_connection()
+				t = threading.Thread(target=convert, args=(trans.base,))
+				t.start()
+
+			if trans.state == TranscriptionState.CONVERTED and not local_currently_transcribing:
+				with currently_transcribing_lock:
 						currently_transcribing = True
 						local_currently_transcribing = True
-					trans.state = TranscriptionState.TRANSCRIBING
-					t = threading.Thread(target=transcribe, args=(trans,))
-					t.start()
-
-				if trans.state == TranscriptionState.TRANSCRIBED:
-					with done_lock:
-						done_transcriptions[uuid] = trans
-					del wip_transcriptions[uuid]
+				trans.state = TranscriptionState.TRANSCRIBING
+				db = get_connection()
+				db.execute(
+					"UPDATE transcriptions SET state = ? WHERE base = ?",
+					(trans.state, trans.base)
+				)
+				db.commit()
+				close_connection()
+				t = threading.Thread(target=transcribe, args=(trans.base,))
+				t.start()
 
 		emit_update()
 		
@@ -190,30 +267,32 @@ def inc_process_loop_count():
 
 
 #------------------------------------------------------------------------------#
-util.make_folder(UPLOAD_DIR)
-util.full_clean(UPLOAD_DIR)
+def init():
+	db = get_connection()
+
+	sql.make_table(db)
+	sql.reset_in_progress(db)
+
+	close_connection()
+
+	util.make_folder(UPLOAD_DIR)
+	
+	inc_process_loop_count()
 
 def emit_update():
-	wip = [] # [{'base': str, 'state': str, filename: str}, ...]
-	with wip_lock:
-		for uuid in wip_transcriptions:
-			trans = wip_transcriptions[uuid]
-			wip.append({
-				"base": str(uuid),
-				"state": TranscriptionState.to_str(trans.state),
-				"filename": trans.original_filename
-			})
+	db = get_connection()
+	
+	cursor = db.execute("SELECT * FROM transcriptions WHERE state < ?", (TranscriptionState.TRANSCRIBED,))
+	wip = [dict(row) for row in cursor.fetchall()]
 
-	done = [] # [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
-	with done_lock:
-		for uuid in done_transcriptions:
-			trans = done_transcriptions[uuid]
-			done.append({
-				"base": str(uuid),
-				"text": trans.text,
-				"with_timestamps": trans.with_timestamps,
-				"filename": trans.original_filename
-			})
+	cursor = db.execute("SELECT * FROM transcriptions WHERE state = ?", (TranscriptionState.TRANSCRIBED,))
+	done = [dict(row) for row in cursor.fetchall()]
+
+	close_connection()
+
+	for l in [wip, done]:
+		for trans in l:
+			trans["state"] = TranscriptionState.to_str(trans["state"])
 
 	sio.emit("update", {
 		"wip": wip,
@@ -230,12 +309,7 @@ def serve(path):
 
 @sio.on("connect")
 def connect():
-	print("Client connected")
 	emit_update()
-
-@sio.on("disconnect")
-def disconnect():
-	print("Client disconnected")
 
 @app.route("/upload/", methods=["POST"])
 def upload():
@@ -248,8 +322,13 @@ def upload():
 		return flask.jsonify({"error": "Invalid file type"})
 	
 	trans = Transcription(file.filename)
-	with wip_lock:
-		wip_transcriptions[trans.base] = trans
+	db = get_connection()
+	db.execute(
+		"INSERT INTO transcriptions (base, original_filename, extension, state, text, with_timestamps) VALUES (?, ?, ?, ?, ?, ?)",
+		trans.to_values()
+	)
+	db.commit()
+	close_connection()
 
 	emit_update()
 
@@ -261,6 +340,14 @@ def upload():
 
 	trans.state = TranscriptionState.DOWNLOADED
 
+	db = get_connection()
+	db.execute(
+		"UPDATE transcriptions SET state = ? WHERE base = ?",
+		(TranscriptionState.DOWNLOADED, trans.base)
+	)
+	db.commit()
+	close_connection()
+
 	emit_update()
 	
 	inc_process_loop_count()
@@ -268,6 +355,7 @@ def upload():
 	return flask.jsonify({"base": trans.base})
 
 
+init()
 # app.run(port=5000, debug=True)
 sio.run(app, port=5000, debug=True)
 #------------------------------------------------------------------------------#

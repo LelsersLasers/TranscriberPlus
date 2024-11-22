@@ -8,8 +8,8 @@
 	let showTimestamps = false;
 
 	let results = {
-		"wip": [],  // [{'base': str, 'state': str, filename: str}, ...]
-		"done": [], // [{'base': str, 'text': str, 'with_timestamps': str, 'filename': str}, ...]
+		"wip": [],
+		"done": [],
 	};
 	let selected = null;
 
@@ -21,18 +21,6 @@
 			results = data;
 		});
 	});
-
-	// setInterval(() => {
-	// 	fetch(api + "/status/")
-	// 		.then((response) => response.json())
-	// 		.then((data) => {
-	// 			results = data;
-	// 		})
-	// 		.catch((error) => {
-	// 			console.error("Error fetching status:", error);
-	// 		});
-	// }, 500);
-
 
 	let file;
 
@@ -74,7 +62,7 @@
 <h3>WIP</h3>
 <ul>
 	{#each results.wip as item (item.base)}
-		<li>{item.filename} - {item.state} ({item.base})</li>
+		<li>({item.extension}) {item.original_filename} - {item.state} ({item.base})</li>
 	{/each}
 </ul>
 
@@ -82,7 +70,7 @@
 <ul>
 	{#each results.done as item (item.base)}
 		<li>
-			<button on:click={() => selected = item.base}>{item.filename}</button>
+			<button on:click={() => selected = item.base}>{item.original_filename}</button>
 		</li>
 	{/each}
 </ul>
