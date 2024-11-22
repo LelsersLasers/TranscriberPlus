@@ -62,7 +62,7 @@
 <h3>WIP</h3>
 <ul>
 	{#each results.wip as item (item.base)}
-		<li>({item.extension}) {item.original_filename} - {item.state} ({item.base})</li>
+		<li>({item.extension}) {item.original_filename} - {item.state_str} ({item.base})</li>
 	{/each}
 </ul>
 

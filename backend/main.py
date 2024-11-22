@@ -205,10 +205,12 @@ def emit_update():
 
 		cursor = db.execute("SELECT * FROM transcriptions WHERE state = ?", (TranscriptionState.TRANSCRIBED,))
 		done = [dict(row) for row in cursor.fetchall()]
+	
+	wip.sort(key=lambda x: x["state"], reverse=True)
 
 	for l in [wip, done]:
 		for trans in l:
-			trans["state"] = TranscriptionState.to_str(trans["state"])
+			trans["state_str"] = TranscriptionState.to_str(trans["state"])
 
 	sio.emit("update", {
 		"wip": wip,
