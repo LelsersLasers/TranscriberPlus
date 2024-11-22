@@ -239,6 +239,16 @@ def delete(base):
 		with db_lock:
 			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
 			db.commit()
+
+		if trans.state == TranscriptionState.CONVERTED:
+			filename = f"{trans.base}.{trans.extension}"
+			filepath = os.path.join(UPLOAD_DIR, filename)
+
+			try:
+				os.remove(filepath)
+			except FileNotFoundError:
+				print(f"File not found: {filepath}")
+		
 		emit_update()
 		return flask.jsonify({"success": True})
 	
