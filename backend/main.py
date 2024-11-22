@@ -258,6 +258,11 @@ def delete(base):
 @app.route("/upload/", methods=["POST"])
 def upload():
 	file = flask.request.files["file"]
+
+	model = flask.request.form.get("model")
+	language = flask.request.form.get("language")
+
+	print(f"Model: {model}, Language: {language}")
 	
 	if not file:
 		return flask.jsonify({"error": "No file provided"})

@@ -1,13 +1,15 @@
-<!-- <svelte:head>
-	
-</svelte:head> -->
-
 <script>
+	import Modal from "./Modal.svelte";
+
 	export let api;
 
 	const TRANSCRIPTION_STATE_CONVERTED = 3;
 
 	let showTimestamps = false;
+
+	let showStartModal = false;
+	let language = "en";
+	let model = "tiny.en";
 
 	let results = {
 		"wip": [],
@@ -36,7 +38,49 @@
 		}
 	}
 
-	function uploadFile() {
+	function languageChanged(e) {
+		language = e.target.value;
+		if (language == "en") {
+			if (model == "tiny") {
+				model = "tiny.en";
+			} else if (model == "base") {
+				model = "base.en";
+			} else if (model == "small") {
+				model = "small.en";
+			} else if (model == "medium") {
+				model = "medium.en";
+			}
+		} else {
+			if (model == "tiny.en") {
+				model = "tiny";
+			} else if (model == "base.en") {
+				model = "base";
+			} else if (model == "small.en") {
+				model = "small";
+			} else if (model == "medium.en") {
+				model = "medium";
+			}
+		}
+	}
+
+	function modelChanged(e) {
+		model = e.target.value;
+		if (model == "tiny.en") {
+			language = "en";
+		} else if (model == "base.en") {
+			language = "en";
+		} else if (model == "small.en") {
+			language = "en";
+		} else if (model == "medium.en") {
+			language = "en";
+		} else {
+			if (language == "en") {
+				language = "auto";
+			}
+		}
+	}
+
+	function start() {
         if (!file) {
             alert("Please select a file.");
             return;
@@ -44,6 +88,12 @@
 
         const formData = new FormData();
         formData.append("file", file);
+		formData.append("language", language);
+		formData.append("model", model);
+
+		document.getElementById("fileInput").value = "";
+
+		showStartModal = false;
 
         try {
 			fetch(api + "/upload/", {
@@ -59,15 +109,8 @@
 
 <h1>Transcriber</h1>
 
-<h2>File Upload</h2>
-<form on:submit|preventDefault={uploadFile}>
-	<input
-		type="file"
-		accept=".mp3,.mp4,.wav"
-		on:change={(e) => (file = e.target.files[0])}
-	/>
-	<button type="submit">Upload</button>
-</form>
+<button on:click={() => showStartModal = true}>New Transcription</button>
+
 
 <h2>Status</h2>
 
@@ -110,3 +153,66 @@
 
 <br />
 
+
+
+<Modal bind:showModal={showStartModal}>
+	<h2>Upload</h2>
+	<form on:submit|preventDefault={start}>
+		<input
+			id="fileInput"
+			type="file"
+			accept=".mp3,.mp4,.wav"
+			on:change={(e) => (file = e.target.files[0])}
+			required
+		/>
+		<br />
+
+		<label for="langauge">Language</label>
+		<select name="language" id="language" required on:input={(e) => languageChanged(e)} bind:value={language}>
+			<option value="en" selected>English (en)</option>
+			<option value="auto">Auto</option>
+			<option value="fr">French (fr)</option>
+			<option value="es">Spanish (es)</option>
+			<option value="zh">Chinese (zh)</option>
+			<option value="ar">Arabic (ar)</option>
+			<option value="be">Belarusian (be)</option>
+			<option value="bg">Bulgarian (bg)</option>
+			<option value="bn">Bengali (bn)</option>
+			<option value="ca">Catalan (ca)</option>
+			<option value="cs">Czech (cs)</option>
+			<option value="cy">Welsh (cy)</option>
+			<option value="da">Danish (da)</option>
+			<option value="de">German (de)</option>
+			<option value="el">Greek (el)</option>
+			<option value="it">Italian (it)</option>
+			<option value="ja">Japanese (ja)</option>
+			<option value="nl">Dutch (nl)</option>
+			<option value="pl">Polish (pl)</option>
+			<option value="pt">Portuguese (pt)</option>
+			<option value="ru">Russian (ru)</option>
+			<option value="sk">Slovak (sk)</option>
+			<option value="sl">Slovenian (sl)</option>
+			<option value="sv">Swedish (sv)</option>
+			<option value="tk">Turkmen (tk)</option>
+			<option value="tr">Turkish (tr)</option>
+		</select>
+		<br />
+
+		<label for="model">Model</label>
+		<select name="model" id="model" required on:input={(e) => modelChanged(e)} bind:value={model}>
+			<option value="tiny.en" selected>tiny.en (speed: x10, memory: ~1 GB)</option>
+			<option value="base.en">base.en (speed: x7, memory: ~1 GB)</option>
+			<option value="small.en">small.en (speed: x4, memory: ~2 GB)</option>
+			<option value="medium.en">medium.en (speed: x2, memory: ~5 GB)</option>
+			<option value="tiny">tiny (speed: x10, memory: ~1 GB)</option>
+			<option value="base">base (speed: x7, memory: ~1 GB)</option>
+			<option value="small">small (speed: x4, memory: ~2 GB)</option>
+			<option value="medium">medium (speed: x2, memory: ~5 GB)</option>
+			<option value="large">large (speed: x1, memory: ~10 GB)</option>
+			<option value="turbo">turbo (speed: x8, memory: ~6 GB)</option>
+		</select>
+		<br />
+
+		<button type="submit">Start</button>
+	</form>
+</Modal>
