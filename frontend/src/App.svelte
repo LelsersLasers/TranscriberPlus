@@ -5,6 +5,8 @@
 <script>
 	export let api;
 
+	const TRANSCRIPTION_STATE_CONVERTED = 3;
+
 	let showTimestamps = false;
 
 	let results = {
@@ -24,7 +26,17 @@
 
 	let file;
 
-	async function uploadFile() {
+	function deleteFile(base) {
+		try {
+			fetch(api + "/delete/" + base, {
+				method: "DELETE",
+			})
+		} catch (error) {
+			console.error("Error deleting file:", error);
+		}
+	}
+
+	function uploadFile() {
         if (!file) {
             alert("Please select a file.");
             return;
@@ -64,6 +76,10 @@
 	{#each results.wip as item (item.base)}
 		<li>
 			({item.extension}) {item.original_filename} - {item.state_str} ({item.base})
+
+			{#if item.state == TRANSCRIPTION_STATE_CONVERTED}
+				<button on:click={() => deleteFile(item.base)}>Delete</button>
+			{/if}
 		</li>
 	{/each}
 </ul>
@@ -72,7 +88,9 @@
 <ul>
 	{#each results.done as item (item.base)}
 		<li>
-			{item.original_filename} <button on:click={() => selected = item.base}>View</button>
+			{item.original_filename}
+			<button on:click={() => selected = item.base}>View</button>
+			<button on:click={() => deleteFile(item.base)}>Delete</button>
 		</li>
 	{/each}
 </ul>

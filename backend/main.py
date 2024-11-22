@@ -229,6 +229,22 @@ def serve(path):
 def connect():
 	emit_update()
 
+@app.route("/delete/<base>", methods=["DELETE"])
+def delete(base):
+	with db_lock:
+		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
+		trans = Transcription.from_dict(dict(cursor.fetchone()))
+	
+	if trans.state in [TranscriptionState.CONVERTED, TranscriptionState.TRANSCRIBED]:
+		with db_lock:
+			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
+			db.commit()
+		emit_update()
+		return flask.jsonify({"success": True})
+	
+	return flask.jsonify({"error": "Cannot delete transcription in this state"})
+
+
 @app.route("/upload/", methods=["POST"])
 def upload():
 	file = flask.request.files["file"]
