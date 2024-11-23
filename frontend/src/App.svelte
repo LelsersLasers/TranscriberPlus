@@ -281,6 +281,7 @@ select {
 				required
 			  />
 			</div>		  
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
 			<span
 			  id="fileNameDisplay"
 			  style="
