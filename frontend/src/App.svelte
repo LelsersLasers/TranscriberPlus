@@ -1,11 +1,13 @@
 <script>
 	import Modal from "./Modal.svelte";
+	import AltModal from "./AltModal.svelte";
 
 	export let api;
 
 	const TRANSCRIPTION_STATE_CONVERTED   = 3;
 	const TRANSCRIPTION_STATE_TRANSCRIBED = 5;
 
+	let showTextModal = false;
 	let showTimestamps = false;
 
 	let showStartModal = false;
@@ -14,6 +16,16 @@
 
 	let results = [];
 	let selected = null;
+
+	let copy = "Copy";
+
+	function copyText(text) {
+		navigator.clipboard.writeText(text);
+		copy = "Copied!";
+		setTimeout(() => {
+			copy = "Copy";
+		}, 3000);
+	}
 
 	document.addEventListener('DOMContentLoaded', () => {
 		const socket = io();
@@ -114,6 +126,13 @@
 			case 5: return "#a6e3a1";
 		}
 	}
+
+	function resultClick(base) {
+		if (results.find((result) => result.base === base).state == TRANSCRIPTION_STATE_TRANSCRIBED) {
+			selected = base;
+			showTextModal = true;
+		}
+	}
 </script>
 
 <style>
@@ -124,7 +143,7 @@
 	width: 100%;
 }
 
-#upload {
+.modal-header {
 	margin-top: 0em;
 	margin-bottom: 0.4em;
 }
@@ -161,7 +180,7 @@
 	width: calc(100% - 20% - 0.5em);
 }
 
-#back {
+.back {
 	font-family: "Schoolbell", cursive;
 	font-weight: 400;
 	font-style: normal;
@@ -170,6 +189,15 @@
 	font-size: 1em;
 	width: 20%;
 	float: right;
+}
+
+.copy {
+	font-family: "Schoolbell", cursive;
+	font-weight: 400;
+	font-style: normal;
+	background-color: #f5c2e7;
+	display: block;
+	font-size: 1em;
 }
 
 input {
@@ -240,6 +268,10 @@ select {
 	border: none;
 	float: right;
 }
+
+.pointer {
+	cursor: pointer;
+}
 </style>
 
 <div class="flex-center">
@@ -256,7 +288,8 @@ select {
 		</div>
 
 		{#each results as result (result.base)}
-			<div class="result" style="background-color: {stateToColor(result.state)}">
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<div class="{result.state == TRANSCRIPTION_STATE_TRANSCRIBED ? 'result pointer' : 'result' }" style="background-color: {stateToColor(result.state)}" on:click={() => {resultClick(result.base)}}>
 				<div class="v-stack">
 					<p class="result-text result-name">{result.original_filename}</p>
 					<br />
@@ -264,9 +297,9 @@ select {
 				</div>
 
 				{#if result.state == TRANSCRIPTION_STATE_CONVERTED}
-					<button class="result-button" on:click={() => deleteFile(result.base)}>Cancel</button>
+					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Cancel</button>
 				{:else if result.state == TRANSCRIPTION_STATE_TRANSCRIBED}
-					<button class="result-button" on:click={() => deleteFile(result.base)}>Delete</button>
+					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Delete</button>
 				{/if}
 			</div>
 		{/each}
@@ -294,9 +327,32 @@ select {
 <br />
 
 
+<AltModal bind:showModal={showTextModal}>
+	<h1 class="modal-header">Text</h1>
+
+	<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
+	<label for="showTimestamps">Show timestamps</label>
+
+	{#if selected}
+		 {#if showTimestamps}
+		 	<br />
+			{@html results.find((result) => result.base === selected).with_timestamps}
+		{:else}
+			<p class="bigger-margin-b">{@html results.find((result) => result.base === selected).text}</p>
+		{/if}
+	{/if}
+
+	<div class="flex-center">
+		<button class="copy" type="button" on:click={() => copyText(results.find((result) => result.base === selected).text)}>{copy}</button>
+	</div>
+
+	<button class="back" type="button" on:click={() => showTextModal = false}>Back</button>
+	<br />
+</AltModal>
+
 
 <Modal bind:showModal={showStartModal}>
-	<h1 id="upload">Upload</h1>
+	<h1 class="modal-header">Upload</h1>
 	<form on:submit|preventDefault={start}>
 		<div style="display: inline-flex; align-items: center; gap: 0.2em; cursor: pointer; margin-bottom: 0.4em;">
 			<!-- Label and input for file selection -->
@@ -406,6 +462,6 @@ select {
 
 		<br />
 		<button id="start" type="submit">Start</button>
-		<button id="back" type="button" on:click={() => showStartModal = false}>Back</button>
+		<button class="back" type="button" on:click={() => showStartModal = false}>Back</button>
 	</form>
 </Modal>
