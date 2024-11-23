@@ -107,7 +107,7 @@
 </script>
 
 <style>
-.flex {
+.flex-center {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -115,59 +115,83 @@
 }
 
 #header {
+	margin-top: 0.5em;
 	width: 250px;
 }
 
+#main {
+	background-color: #313244;
+	width: 90%;
+	border-radius: 2em;
+	padding: 1em;
+}
+
+
+#new-transcription {
+	padding: 0.5em 1em;
+	border-radius: 0.5em;
+	background-color: #94e2d5;
+	color: #181825;
+	font-family: "Schoolbell", cursive;
+	font-weight: 400;
+	font-style: normal;
+	font-size: 1em;
+}
 </style>
 
-<br />
-
-<div class="flex">
+<div class="flex-center">
 	<img id="header" src="/header.png" alt="header" />
 	<br />
 </div>
 
-<button on:click={() => showStartModal = true}>New Transcription</button>
+<br />
 
+<div class="flex-center">
+	<div id="main">
+		<div class="flex-center">
+			<button id="new-transcription" on:click={() => showStartModal = true}>New Transcription</button>
+		</div>
 
-<h2>Status</h2>
-
-<h3>WIP</h3>
-<ul>
-	{#each results.wip as item (item.base)}
-		<li>
-			({item.extension}) {item.original_filename} - {item.state_str} ({item.base})
-
-			{#if item.state == TRANSCRIPTION_STATE_CONVERTED}
-				<button on:click={() => deleteFile(item.base)}>Delete</button>
+		<h2>Status</h2>
+	
+		<h3>WIP</h3>
+		<ul>
+			{#each results.wip as item (item.base)}
+				<li>
+					({item.extension}) {item.original_filename} - {item.state_str} ({item.base})
+	
+					{#if item.state == TRANSCRIPTION_STATE_CONVERTED}
+						<button on:click={() => deleteFile(item.base)}>Delete</button>
+					{/if}
+				</li>
+			{/each}
+		</ul>
+	
+		<h3>Done</h3>
+		<ul>
+			{#each results.done as item (item.base)}
+				<li>
+					{item.original_filename}
+					<button on:click={() => selected = item.base}>View</button>
+					<button on:click={() => deleteFile(item.base)}>Delete</button>
+				</li>
+			{/each}
+		</ul>
+	
+	
+		<h2>Text</h2>
+		<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
+		<label for="showTimestamps">Show timestamps</label>
+		{#if selected}
+			{#if showTimestamps}
+				{@html results.done.find((item) => item.base === selected).with_timestamps}
+			{:else}
+				<p>{@html results.done.find((item) => item.base === selected).text}</p>
 			{/if}
-		</li>
-	{/each}
-</ul>
+		{/if}
+	</div>
+</div>
 
-<h3>Done</h3>
-<ul>
-	{#each results.done as item (item.base)}
-		<li>
-			{item.original_filename}
-			<button on:click={() => selected = item.base}>View</button>
-			<button on:click={() => deleteFile(item.base)}>Delete</button>
-		</li>
-	{/each}
-</ul>
-
-
-<h2>Text</h2>
-<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
-<label for="showTimestamps">Show timestamps</label>
-
-{#if selected}
-	{#if showTimestamps}
-		{@html results.done.find((item) => item.base === selected).with_timestamps}
-	{:else}
-		<p>{@html results.done.find((item) => item.base === selected).text}</p>
-	{/if}
-{/if}
 
 <br />
 
