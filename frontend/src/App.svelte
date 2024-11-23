@@ -90,6 +90,7 @@
 		formData.append("model", model);
 
 		document.getElementById("fileInput").value = "";
+		document.getElementById("fileNameDisplay").textContent = "No file chosen";
 
 		showStartModal = false;
 
@@ -108,7 +109,7 @@
 			case 0: return "#f5c2e7";
 			case 1: return "#eba0ac";
 			case 2: return "#fab387";
-			case 3: return "#89dceb";
+			case 3: return "#cba6f7";
 			case 4: return "#74c7ec";
 			case 5: return "#a6e3a1";
 		}
@@ -193,6 +194,52 @@ select {
 	font-style: italic;
 	margin-bottom: 0.2em;
 }
+
+.result {
+	padding: 0.5em;
+	border-radius: 1em;
+	margin-top: 0.5em;
+	margin-bottom: 0.2em;
+	color: #181825;
+
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.v-stack {
+	width: 100%;
+	margin-left: 1em;
+}
+
+.result-text {
+	margin: 0;
+	padding: 0;
+	display: inline-block;
+}
+
+.result-name {
+	font-size: 1.2em;
+	font-weight: 800;
+}
+
+.result-status {
+	color: #45475a;
+	font-style: italic;
+}
+
+.result-button {
+	padding: 0.5em;
+	border-radius: 0.5em;
+	background-color: #f5e0dc;
+	color: #181825;
+	font-family: "Schoolbell", cursive;
+	font-weight: 400;
+	font-style: normal;
+	font-size: 1em;
+	border: none;
+	float: right;
+}
 </style>
 
 <div class="flex-center">
@@ -210,12 +257,16 @@ select {
 
 		{#each results as result (result.base)}
 			<div class="result" style="background-color: {stateToColor(result.state)}">
-				{result.original_filename} - {result.state_str} ({result.base})
+				<div class="v-stack">
+					<p class="result-text result-name">{result.original_filename}</p>
+					<br />
+					<p class="result-text result-status">Status: {result.state_str}</p>
+				</div>
 
 				{#if result.state == TRANSCRIPTION_STATE_CONVERTED}
-					<button on:click={() => deleteFile(result.base)}>Cancel</button>
+					<button class="result-button" on:click={() => deleteFile(result.base)}>Cancel</button>
 				{:else if result.state == TRANSCRIPTION_STATE_TRANSCRIBED}
-					<button on:click={() => deleteFile(result.base)}>Delete</button>
+					<button class="result-button" on:click={() => deleteFile(result.base)}>Delete</button>
 				{/if}
 			</div>
 		{/each}
@@ -247,7 +298,7 @@ select {
 <Modal bind:showModal={showStartModal}>
 	<h1 id="upload">Upload</h1>
 	<form on:submit|preventDefault={start}>
-		<div style="display: inline-flex; align-items: center; gap: 0.2em; cursor: pointer" class="bigger-margin-b">
+		<div style="display: inline-flex; align-items: center; gap: 0.2em; cursor: pointer; margin-bottom: 0.4em;">
 			<!-- Label and input for file selection -->
 			<div style="position: relative; display: inline-block; cursor: pointer;">
 				<label

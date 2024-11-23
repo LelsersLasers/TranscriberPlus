@@ -12,17 +12,17 @@ class TranscriptionState:
 	@staticmethod
 	def to_str(state: int):
 		if state == TranscriptionState.INIT:
-			return "Pending"
+			return "Pending..."
 		elif state == TranscriptionState.DOWNLOADED:
 			return "Downloaded"
 		elif state == TranscriptionState.CONVERTING:
-			return "Converting to WAV"
+			return "Converting to wav..."
 		elif state == TranscriptionState.CONVERTED:
-			return "Waiting to transcribe"
+			return "Waiting to transcribe..."
 		elif state == TranscriptionState.TRANSCRIBING:
-			return "Transcribing"
+			return "Transcribing..."
 		elif state == TranscriptionState.TRANSCRIBED:
-			return "Done"
+			return "Done!"
 
 class Transcription:
 	def __init__(self, filename: str, model: str, language: str):
