@@ -5,7 +5,6 @@ import flask
 import flask_cors # type: ignore[import]
 import flask_socketio # type: ignore[import]
 import logging
-import time
 
 import whisper # type: ignore[import]
 
@@ -207,7 +206,7 @@ def emit_update():
 	
 	wip.sort(key=lambda x: x["state"], reverse=True)
 	done.reverse()
-	
+
 	all = wip + done
 
 	for trans in all:
