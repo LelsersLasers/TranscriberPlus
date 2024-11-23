@@ -328,7 +328,9 @@ select {
 
 
 <AltModal bind:showModal={showTextModal}>
-	<h1 class="modal-header">Text</h1>
+	{#if selected}
+		<h1 class="modal-header">{results.find((result) => result.base === selected).original_filename}</h1>
+	{/if}
 
 	<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
 	<label for="showTimestamps">Show timestamps</label>
