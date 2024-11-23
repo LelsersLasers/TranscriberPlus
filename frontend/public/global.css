@@ -10,7 +10,12 @@ html, boy {
 	outline: none;
 }
 
+input, select {
+	cursor: pointer;
+}
+
 button {
 	padding: 0.5em 1em;
 	border-radius: 0.5em;
+	cursor: pointer;
 }

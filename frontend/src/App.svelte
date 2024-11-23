@@ -243,14 +243,63 @@ select {
 <Modal bind:showModal={showStartModal}>
 	<h1 id="upload">Upload</h1>
 	<form on:submit|preventDefault={start}>
-		<input
-			class="bigger-margin-b"
-			id="fileInput"
-			type="file"
-			accept=".mp3,.mp4,.wav"
-			on:change={(e) => (file = e.target.files[0])}
-			required
-		/>
+		<div style="display: inline-flex; align-items: center; gap: 0.2em; cursor: pointer" class="bigger-margin-b">
+			<!-- Label and input for file selection -->
+			<div style="position: relative; display: inline-block; cursor: pointer;">
+				<label
+					for="fileInput"
+					style="
+						display: inline-block;
+						padding: 0.4em;
+						padding-left: 0.6em;
+						background-color: #89dceb;
+						font-size: 1em;
+						border-radius: 0.5em 0 0 0.5em;
+						cursor: pointer;
+					"
+				>
+				Choose File
+			  </label>
+			  <input
+				id="fileInput"
+				type="file"
+				accept=".mp3,.mp4,.wav"
+				style="
+				  opacity: 0;
+				  position: absolute;
+				  left: 0;
+				  top: 0;
+				  width: 100%;
+				  height: 100%;
+				  cursor: pointer;
+				"
+
+				on:change={(e) => {
+				  file = e.target.files[0];
+				  document.getElementById("fileNameDisplay").textContent = file.name;
+				}}
+				required
+			  />
+			</div>		  
+			<span
+			  id="fileNameDisplay"
+			  style="
+				font-size: 14px;
+				color: #313244;
+				font-style: italic;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				max-width: 250px;
+				display: inline-block;
+				font-size: 1em;
+				cursor: pointer;
+			  "
+			  on:click={() => document.getElementById("fileInput").click()}
+			>
+			  No file chosen
+			</span>
+		  </div>
 		<br />
 
 		<label class="bigger-margin-b" for="langauge">Language:</label>
