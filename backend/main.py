@@ -206,7 +206,8 @@ def emit_update():
 		done = [dict(row) for row in cursor.fetchall()]
 	
 	wip.sort(key=lambda x: x["state"], reverse=True)
-
+	done.reverse()
+	
 	all = wip + done
 
 	for trans in all:
