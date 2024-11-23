@@ -22,7 +22,7 @@ class TranscriptionState:
 		elif state == TranscriptionState.TRANSCRIBING:
 			return "Transcribing"
 		elif state == TranscriptionState.TRANSCRIBED:
-			return "Transcribed"
+			return "Done"
 
 class Transcription:
 	def __init__(self, filename: str, model: str, language: str):

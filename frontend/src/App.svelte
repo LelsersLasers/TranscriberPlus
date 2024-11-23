@@ -3,7 +3,8 @@
 
 	export let api;
 
-	const TRANSCRIPTION_STATE_CONVERTED = 3;
+	const TRANSCRIPTION_STATE_CONVERTED   = 3;
+	const TRANSCRIPTION_STATE_TRANSCRIBED = 5;
 
 	let showTimestamps = false;
 
@@ -11,18 +12,15 @@
 	let language = "en";
 	let model = "tiny.en";
 
-	let results = {
-		"wip": [],
-		"done": [],
-	};
+	let results = [];
 	let selected = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
 		const socket = io();
 
 		socket.on('update', (data) => {
-			console.log('update', data);
-			results = data;
+			results = data["transcriptions"];
+			console.log(results);
 		});
 	});
 
@@ -104,6 +102,17 @@
             console.error("Error uploading file:", error);
         }
     }
+
+	function stateToColor(state) {
+		switch (state) {
+			case 0: return "#f5c2e7";
+			case 1: return "#eba0ac";
+			case 2: return "#fab387";
+			case 3: return "#89dceb";
+			case 4: return "#74c7ec";
+			case 5: return "#a6e3a1";
+		}
+	}
 </script>
 
 <style>
@@ -180,6 +189,10 @@ select {
 	font-size: 1em;
 }
 
+#no-transcriptions {
+	font-style: italic;
+	margin-bottom: 0.2em;
+}
 </style>
 
 <div class="flex-center">
@@ -195,34 +208,25 @@ select {
 			<button id="new-transcription" on:click={() => showStartModal = true}>New Transcription</button>
 		</div>
 
-		<h2>Status</h2>
-	
-		<h3>WIP</h3>
-		<ul>
-			{#each results.wip as item (item.base)}
-				<li>
-					({item.extension}) {item.original_filename} - {item.state_str} ({item.base})
-	
-					{#if item.state == TRANSCRIPTION_STATE_CONVERTED}
-						<button on:click={() => deleteFile(item.base)}>Delete</button>
-					{/if}
-				</li>
-			{/each}
-		</ul>
-	
-		<h3>Done</h3>
-		<ul>
-			{#each results.done as item (item.base)}
-				<li>
-					{item.original_filename}
-					<button on:click={() => selected = item.base}>View</button>
-					<button on:click={() => deleteFile(item.base)}>Delete</button>
-				</li>
-			{/each}
-		</ul>
-	
-	
-		<h2>Text</h2>
+		{#each results as result (result.base)}
+			<div class="result" style="background-color: {stateToColor(result.state)}">
+				{result.original_filename} - {result.state_str} ({result.base})
+
+				{#if result.state == TRANSCRIPTION_STATE_CONVERTED}
+					<button on:click={() => deleteFile(result.base)}>Cancel</button>
+				{:else if result.state == TRANSCRIPTION_STATE_TRANSCRIBED}
+					<button on:click={() => deleteFile(result.base)}>Delete</button>
+				{/if}
+			</div>
+		{/each}
+
+		{#if results.length == 0}
+			<div class="flex-center">
+				<p id="no-transcriptions">No transcriptions yet!</p>
+			</div>
+		{/if}
+
+		<!-- <h2>Text</h2>
 		<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
 		<label for="showTimestamps">Show timestamps</label>
 		{#if selected}
@@ -231,7 +235,7 @@ select {
 			{:else}
 				<p>{@html results.done.find((item) => item.base === selected).text}</p>
 			{/if}
-		{/if}
+		{/if} -->
 	</div>
 </div>
 

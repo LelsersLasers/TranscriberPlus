@@ -207,13 +207,13 @@ def emit_update():
 	
 	wip.sort(key=lambda x: x["state"], reverse=True)
 
-	for l in [wip, done]:
-		for trans in l:
-			trans["state_str"] = TranscriptionState.to_str(trans["state"])
+	all = wip + done
+
+	for trans in all:
+		trans["state_str"] = TranscriptionState.to_str(trans["state"])
 
 	sio.emit("update", {
-		"wip": wip,
-		"done": done
+		"transcriptions": all
 	})
 
 
