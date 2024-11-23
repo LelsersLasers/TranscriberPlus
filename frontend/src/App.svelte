@@ -106,8 +106,26 @@
     }
 </script>
 
+<style>
+.flex {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+}
 
-<h1>Transcriber</h1>
+#header {
+	width: 250px;
+}
+
+</style>
+
+<br />
+
+<div class="flex">
+	<img id="header" src="/header.png" alt="header" />
+	<br />
+</div>
 
 <button on:click={() => showStartModal = true}>New Transcription</button>
 
