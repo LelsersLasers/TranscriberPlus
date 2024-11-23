@@ -290,14 +290,14 @@ select {
 			  id="fileNameDisplay"
 			  style="
 				font-size: 14px;
-				color: #313244;
+				color: #45475a;
 				font-style: italic;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
 				max-width: 250px;
 				display: inline-block;
-				font-size: 1em;
+				font-size: 0.9em;
 				cursor: pointer;
 			  "
 			  on:click={() => document.getElementById("fileInput").click()}
