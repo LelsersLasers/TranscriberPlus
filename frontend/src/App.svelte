@@ -114,6 +114,11 @@
 	width: 100%;
 }
 
+#upload {
+	margin-top: 0em;
+	margin-bottom: 0.4em;
+}
+
 #header {
 	margin-top: 0.5em;
 	width: 250px;
@@ -126,7 +131,6 @@
 	padding: 1em;
 }
 
-
 #new-transcription {
 	padding: 0.5em 1em;
 	border-radius: 0.5em;
@@ -137,6 +141,45 @@
 	font-style: normal;
 	font-size: 1em;
 }
+
+#start {
+	background-color: #cba6f7;
+	font-family: "Schoolbell", cursive;
+	font-weight: 400;
+	font-style: normal;
+	font-size: 1em;
+	width: calc(100% - 20% - 0.5em);
+}
+
+#back {
+	font-family: "Schoolbell", cursive;
+	font-weight: 400;
+	font-style: normal;
+	background-color: #f5e0dc;
+	display: block;
+	font-size: 1em;
+	width: 20%;
+	float: right;
+}
+
+input {
+	font-family: "Schoolbell", cursive;
+	font-weight: 400;
+	font-style: normal;
+	font-size: 1em;
+}
+
+.bigger-margin-b {
+	margin-bottom: 0.3em;
+}
+
+select {
+	font-family: "Schoolbell", cursive;
+	font-weight: 200;
+	font-style: normal;
+	font-size: 1em;
+}
+
 </style>
 
 <div class="flex-center">
@@ -198,9 +241,10 @@
 
 
 <Modal bind:showModal={showStartModal}>
-	<h2>Upload</h2>
+	<h1 id="upload">Upload</h1>
 	<form on:submit|preventDefault={start}>
 		<input
+			class="bigger-margin-b"
 			id="fileInput"
 			type="file"
 			accept=".mp3,.mp4,.wav"
@@ -209,8 +253,8 @@
 		/>
 		<br />
 
-		<label for="langauge">Language</label>
-		<select name="language" id="language" required on:input={(e) => languageChanged(e)} bind:value={language}>
+		<label class="bigger-margin-b" for="langauge">Language:</label>
+		<select class="bigger-margin-b" name="language" id="language" required on:input={(e) => languageChanged(e)} bind:value={language}>
 			<option value="en" selected>English (en)</option>
 			<option value="auto">Auto</option>
 			<option value="fr">French (fr)</option>
@@ -240,7 +284,7 @@
 		</select>
 		<br />
 
-		<label for="model">Model</label>
+		<label for="model">Model:</label>
 		<select name="model" id="model" required on:input={(e) => modelChanged(e)} bind:value={model}>
 			<option value="tiny.en" selected>tiny.en (speed: x10, memory: ~1 GB)</option>
 			<option value="base.en">base.en (speed: x7, memory: ~1 GB)</option>
@@ -255,6 +299,8 @@
 		</select>
 		<br />
 
-		<button type="submit">Start</button>
+		<br />
+		<button id="start" type="submit">Start</button>
+		<button id="back" type="button" on:click={() => showStartModal = false}>Back</button>
 	</form>
 </Modal>

@@ -5,3 +5,12 @@ html, boy {
 	font-weight: 400;
 	font-style: normal;
 }
+
+*:focus {
+	outline: none;
+}
+
+button {
+	padding: 0.5em 1em;
+	border-radius: 0.5em;
+}

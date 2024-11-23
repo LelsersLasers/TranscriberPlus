@@ -38,21 +38,30 @@
 				on:click|preventDefault={() => dialog.close()}
 			/>
 		{:else}
-			<input type="reset" value="Back" on:click|preventDefault={() => dialog.close()} />
+			<!-- <input type="reset" value="Back" on:click|preventDefault={() => dialog.close()} /> -->
+			<!-- <button id="back" type="button" on:click={() => dialog.close()}>Back</button> -->
 		{/if}
 	</div>
 </dialog>
 
 <style>
 	dialog {
-		/* width: 60%; */
-		width: 95%;
-		border-radius: 0.2em;
+		width: 80%;
+		border-radius: 1.5em;
 		border: none;
-		padding: 0;
+		padding: 0.5em;
+		background-color: #ffffff;
+
+		color: #1e1e2e;
+		font-family: "Schoolbell", cursive;
+		font-weight: 400;
+		font-style: normal;
+
+		transform: translateY(-50%);
+		/* top: 60% */
 	}
 
-	@media (min-width: 800px) {
+	@media (min-width: 650px) {
 		dialog {
 			width: 60%;
 		}
@@ -66,23 +75,9 @@
 		padding: 1em;
 	}
 
-	input[type='reset'] {
-		display: block;
+	* {
+		font-family: "Schoolbell", cursive;
+		font-weight: 400;
+		font-style: normal;
 	}
-
-	/* dialog {
-		max-width: 32em;
-		border-radius: 0.2em;
-		border: none;
-		padding: 0;
-	}
-	dialog::backdrop {
-		background: rgba(0, 0, 0, 0.3);
-	}
-	dialog > div {
-		padding: 1em;
-	}
-	input[type='reset'] {
-		display: block;
-	} */
 </style>
