@@ -26,7 +26,7 @@ WORKDIR /app/backend
 COPY backend/ /app/backend/
 
 # Install Python dependencies
-RUN pip install flask flask_cors flask_socketio openai-whisper
+RUN python3 -m pip install flask flask_cors flask_socketio openai-whisper
 
 # Set the working directory for the frontend
 WORKDIR /app/frontend
@@ -46,4 +46,4 @@ EXPOSE 3004
 WORKDIR /app/backend
 
 # Command to start the Flask app
-CMD ["python", "main.py"]
+CMD ["python3", "main.py"]
