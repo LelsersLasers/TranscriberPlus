@@ -217,6 +217,7 @@ def init():
 	inc_process_loop_count()
 
 def emit_update():
+	print("Emit")
 	with db_lock:	
 		cursor = db.execute("SELECT * FROM transcriptions WHERE state < ?", (TranscriptionState.TRANSCRIBED,))
 		wip = [dict(row) for row in cursor.fetchall()]
@@ -250,6 +251,8 @@ def connect():
 
 @app.route("/delete/<base>", methods=["DELETE"])
 def delete(base):
+	print("/Delete")
+
 	with db_lock:
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
 		trans = Transcription.from_dict(dict(cursor.fetchone()))
@@ -276,6 +279,8 @@ def delete(base):
 
 @app.route("/upload/", methods=["POST"])
 def upload():
+	print("/Upload")
+
 	file = flask.request.files["file"]
 
 	model = flask.request.form.get("model")
