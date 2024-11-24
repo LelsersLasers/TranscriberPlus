@@ -120,12 +120,12 @@
 	function stateToColor(state) {
 		switch (state) {
 			case -1: return "#6c7086";
-			case  1: return "#f5c2e7";
-			case  2: return "#eba0ac";
-			case  3: return "#fab387";
-			case  4: return "#cba6f7";
-			case  5: return "#74c7ec";
-			case  6: return "#a6e3a1";
+			case  0: return "#f5c2e7";
+			case  1: return "#eba0ac";
+			case  2: return "#fab387";
+			case  3: return "#cba6f7";
+			case  4: return "#74c7ec";
+			case  5: return "#a6e3a1";
 		}
 	}
 
