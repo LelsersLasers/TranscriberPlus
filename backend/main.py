@@ -271,7 +271,7 @@ def delete(base):
 		emit_update()
 		return flask.jsonify({"success": True})
 	
-	return flask.jsonify({"error": "Cannot delete transcription in this state"})
+	return flask.jsonify({"error": "Cannot delete or cancel transcription in this state"})
 
 
 @app.route("/upload/", methods=["POST"])
@@ -285,7 +285,7 @@ def upload():
 		return flask.jsonify({"error": "No file provided"})
 	
 	if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
-		return flask.jsonify({"error": "Invalid file type"})
+		return flask.jsonify({"error": "Invalid file type. Accepted types: " + ", ".join(ALLOWED_EXTENSIONS)})
 	
 	trans = Transcription(file.filename, model, language)
 	with db_lock:
@@ -314,7 +314,7 @@ def upload():
 	
 	inc_process_loop_count()
 
-	return flask.jsonify({"base": trans.base})
+	return flask.jsonify({"success": True})
 
 
 init()

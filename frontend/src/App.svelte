@@ -18,6 +18,8 @@
 	let results = [];
 	let selected = null;
 
+	let loading = false;
+
 	let copy = "Copy";
 
 	function copyText(text) {
@@ -41,11 +43,23 @@
 
 	function deleteFile(base) {
 		try {
+			loading = true;
 			fetch(api + "/delete/" + base, {
 				method: "DELETE",
 			})
+				.then((res) => res.json())
+				.then((data) => {
+					loading = false;
+					if (data["error"]) {
+						alert(data["error"]);
+					}
+				})
+				.catch(() => {
+					loading = false;
+				});
 		} catch (error) {
 			console.error("Error deleting file:", error);
+			loading = false;
 		}
 	}
 
@@ -108,10 +122,21 @@
 		showStartModal = false;
 
         try {
+			loading = true;
 			fetch(api + "/upload/", {
 				method: "POST",
 				body: formData,
 			})
+				.then((res) => res.json())
+				.then((data) => {
+					loading = false;
+					if (data["error"]) {
+						alert(data["error"]);
+					}
+				})
+				.catch(() => {
+					loading = false;
+				});
         } catch (error) {
             console.error("Error uploading file:", error);
         }
@@ -280,6 +305,25 @@ select {
 .pointer {
 	cursor: pointer;
 }
+
+/* HTML: <div class="loader"></div> */
+.loader {
+	width: fit-content;
+
+	font-family: "Schoolbell", cursive;
+	font-weight: 400;
+	font-style: normal;
+	font-size: 1em;
+
+	padding-bottom: 1px;
+	background: linear-gradient(currentColor 0 0) 0 100%/0% 3px no-repeat;
+	animation: l2 2s linear infinite;
+
+	position: absolute;
+	top: 2%;
+	right: 2%;
+}
+@keyframes l2 {to{background-size: 100% 3px}}
 </style>
 
 <div class="flex-center">
@@ -288,6 +332,10 @@ select {
 </div>
 
 <br />
+
+
+<div class="loader" style="display: {loading ? 'block' : 'none'}">Loading...</div>
+
 
 <div class="flex-center">
 	<div id="main">
