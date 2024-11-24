@@ -19,6 +19,8 @@ from transcription import Transcription, TranscriptionState
 
 
 #------------------------------------------------------------------------------#
+PORT = 3004
+
 SVELTE_DIR = "../frontend/public"
 UPLOAD_DIR = "./temp"
 ALLOWED_EXTENSIONS = ["wav", "mp3", "mp4"]
@@ -298,5 +300,5 @@ def upload():
 
 
 init()
-sio.run(app, port=5000, debug=False)
+sio.run(app, host="0.0.0.0", port=3004, debug=False)
 #------------------------------------------------------------------------------#
