@@ -311,17 +311,6 @@ select {
 				<p id="no-transcriptions">No transcriptions yet!</p>
 			</div>
 		{/if}
-
-		<!-- <h2>Text</h2>
-		<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
-		<label for="showTimestamps">Show timestamps</label>
-		{#if selected}
-			{#if showTimestamps}
-				{@html results.done.find((item) => item.base === selected).with_timestamps}
-			{:else}
-				<p>{@html results.done.find((item) => item.base === selected).text}</p>
-			{/if}
-		{/if} -->
 	</div>
 </div>
 
