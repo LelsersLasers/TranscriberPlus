@@ -42,6 +42,8 @@ COPY frontend/ /app/frontend/
 RUN npm install -g rollup
 RUN npm install
 
+RUN ls -la
+
 RUN npm list rollup-plugin-svelte
 
 RUN npm run build
