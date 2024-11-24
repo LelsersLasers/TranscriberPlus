@@ -57,6 +57,8 @@ def convert(base: str):
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
 		trans = Transcription.from_dict(dict(cursor.fetchone()))
 
+	error = False
+
 	if trans.extension == "mp4":
 		new_filename = f"{trans.base}.wav"
 		new_filepath = os.path.join(UPLOAD_DIR, new_filename)
@@ -78,9 +80,17 @@ def convert(base: str):
 			)
 			db.commit()
 
-	trans.state = TranscriptionState.CONVERTED
-	with db_lock:
-		sql.update_state(db, trans.base, trans.state)
+		if not os.path.exists(new_filepath):
+			error = True
+			print(f"Error converting {new_filename} to {new_filename}")
+
+			with db_lock:
+				sql.update_state(db, trans.base, TranscriptionState.ERROR)
+
+	if not error:
+		trans.state = TranscriptionState.CONVERTED
+		with db_lock:
+			sql.update_state(db, trans.base, trans.state)
 
 	emit_update()
 
@@ -96,25 +106,33 @@ def transcribe(base):
 	filename = f"{trans.base}.{trans.extension}"
 	filepath = os.path.join(UPLOAD_DIR, filename)
 
-	model = whisper.load_model(trans.model)
-	result = model.transcribe(filepath, language=trans.language, verbose=False)
+	try:
+		model = whisper.load_model(trans.model)
+		result = model.transcribe(filepath, language=trans.language, verbose=False)
 
-	os.remove(filepath)
+		os.remove(filepath)
 
-	trans.text = result["text"]
-	trans.with_timestamps = ""
-	for s in result["segments"]:
-		start = util.format_time(s["start"])
-		trans.with_timestamps += f"[{start}] {s['text'].strip()} <br />"
+		trans.text = result["text"]
+		trans.with_timestamps = ""
+		for s in result["segments"]:
+			start = util.format_time(s["start"])
+			trans.with_timestamps += f"[{start}] {s['text'].strip()} <br />"
 
-	trans.state = TranscriptionState.TRANSCRIBED
+		trans.state = TranscriptionState.TRANSCRIBED
 
-	with db_lock:
-		db.execute(
-			"UPDATE transcriptions SET state = ?, text = ?, with_timestamps = ? WHERE base = ?",
-			(trans.state, trans.text, trans.with_timestamps, trans.base)
-		)
-		db.commit()
+		with db_lock:
+			db.execute(
+				"UPDATE transcriptions SET state = ?, text = ?, with_timestamps = ? WHERE base = ?",
+				(trans.state, trans.text, trans.with_timestamps, trans.base)
+			)
+			db.commit()
+	except Exception as e:
+		print(f"Error transcribing {filename}: {e}")
+
+		os.remove(filepath)
+
+		with db_lock:
+			sql.update_state(db, trans.base, TranscriptionState.ERROR)
 
 	emit_update()
 
@@ -236,7 +254,7 @@ def delete(base):
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
 		trans = Transcription.from_dict(dict(cursor.fetchone()))
 	
-	if trans.state in [TranscriptionState.CONVERTED, TranscriptionState.TRANSCRIBED]:
+	if trans.state in [TranscriptionState.ERROR, TranscriptionState.CONVERTED, TranscriptionState.TRANSCRIBED]:
 		with db_lock:
 			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
 			db.commit()

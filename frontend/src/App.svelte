@@ -4,6 +4,7 @@
 
 	export let api;
 
+	const TRANSCRIPTION_STATE_ERROR       = -1;
 	const TRANSCRIPTION_STATE_CONVERTED   = 3;
 	const TRANSCRIPTION_STATE_TRANSCRIBED = 5;
 
@@ -118,12 +119,13 @@
 
 	function stateToColor(state) {
 		switch (state) {
-			case 0: return "#f5c2e7";
-			case 1: return "#eba0ac";
-			case 2: return "#fab387";
-			case 3: return "#cba6f7";
-			case 4: return "#74c7ec";
-			case 5: return "#a6e3a1";
+			case -1: return "#6c7086";
+			case  1: return "#f5c2e7";
+			case  2: return "#eba0ac";
+			case  3: return "#fab387";
+			case  4: return "#cba6f7";
+			case  5: return "#74c7ec";
+			case  6: return "#a6e3a1";
 		}
 	}
 
@@ -298,7 +300,7 @@ select {
 
 				{#if result.state == TRANSCRIPTION_STATE_CONVERTED}
 					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Cancel</button>
-				{:else if result.state == TRANSCRIPTION_STATE_TRANSCRIBED}
+				{:else if result.state == TRANSCRIPTION_STATE_TRANSCRIBED || result.state == TRANSCRIPTION_STATE_ERROR}
 					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Delete</button>
 				{/if}
 			</div>

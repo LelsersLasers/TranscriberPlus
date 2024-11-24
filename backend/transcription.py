@@ -2,6 +2,7 @@ import util
 import uuid
 
 class TranscriptionState:
+	ERROR 	     = -1
 	INIT         = 0
 	DOWNLOADED   = 1
 	CONVERTING   = 2
@@ -11,7 +12,9 @@ class TranscriptionState:
 
 	@staticmethod
 	def to_str(state: int):
-		if state == TranscriptionState.INIT:
+		if state == TranscriptionState.ERROR:
+			return "Error! (Invalid file or a problem occurred.)"
+		elif state == TranscriptionState.INIT:
 			return "Pending..."
 		elif state == TranscriptionState.DOWNLOADED:
 			return "Downloaded"
