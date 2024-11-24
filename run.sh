@@ -2,9 +2,6 @@
 
 cd /home/millankumar/code/TranscriberPlus
 
-cd frontend
-npm install
-npm run build
+docker build -t transcriberplus .
 
-cd ../backend
-python3 main.py
+docker run -v $(pwd)/backend:/app/backend -p 5000:5000 transcriberplus
