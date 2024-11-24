@@ -205,7 +205,14 @@
 	font-weight: 400;
 	font-style: normal;
 	font-size: 1em;
-	width: calc(100% - 20% - 0.5em);
+	width: calc(100% - 25% - 0.5em);
+}
+
+button {
+	border-width: 2px;
+	border-style: outset;
+	border-color: #181825;
+	color: #181825;
 }
 
 .back {
@@ -215,7 +222,7 @@
 	background-color: #f5e0dc;
 	display: block;
 	font-size: 1em;
-	width: 20%;
+	width: 25%;
 	float: right;
 }
 

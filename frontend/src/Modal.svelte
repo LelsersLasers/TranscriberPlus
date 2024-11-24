@@ -28,19 +28,6 @@
 >
 	<div on:click|stopPropagation>
 		<slot />
-		{#if window.mobileCheck()}
-			<!-- autofocus steals it from the input meaning that on mobile the keyboard doesn't pop up -->
-			<!-- svelte-ignore a11y-autofocus -->
-			<input
-				autofocus
-				type="reset"
-				value="Back"
-				on:click|preventDefault={() => dialog.close()}
-			/>
-		{:else}
-			<!-- <input type="reset" value="Back" on:click|preventDefault={() => dialog.close()} /> -->
-			<!-- <button id="back" type="button" on:click={() => dialog.close()}>Back</button> -->
-		{/if}
 	</div>
 </dialog>
 
