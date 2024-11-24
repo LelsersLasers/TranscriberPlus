@@ -1,6 +1,12 @@
-# Transcriber
+# Transcriber+
 
-- Name
-- Date
+## Tech Stack
+- Frontend
+	- Svelte
+- Backend
+	- Python, Flask, Flask-SocketIO
+	- Whisper (OpenAI)
+	- SQlite
 
-End goal: website that you can upload video/audio files and it transcribes them
+![Showcase2](./showcase/2.png)
+![Showcase1](./showcase/1.png)
