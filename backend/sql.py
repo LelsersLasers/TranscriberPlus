@@ -1,5 +1,5 @@
 import os
-
+import sqlite3
 from transcription import Transcription, TranscriptionState
 
 
@@ -17,14 +17,14 @@ CREATE TABLE IF NOT EXISTS transcriptions (
 );
 """
 
-def make_table(db):
+def make_table(db: sqlite3.Connection):
 	db.executescript(CREATE_TABLES)
 
-def update_state(db, base, state):
+def update_state(db: sqlite3.Connection, base: str, state: int):
 	db.execute("UPDATE transcriptions SET state = ? WHERE base = ?", (state, base))
 	db.commit()
 
-def reset_in_progress(db, upload_dir):
+def reset_in_progress(db: sqlite3.Connection, upload_dir: str):
 	cursor = db.execute("SELECT * FROM transcriptions WHERE state = ?", (TranscriptionState.CONVERTING,))
 	transcriptions = [Transcription.from_dict(dict(row)) for row in cursor.fetchall()]
 
