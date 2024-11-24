@@ -318,5 +318,5 @@ def upload():
 
 
 init()
-sio.run(app, host="0.0.0.0", port=3004, debug=False)
+sio.run(app, host="0.0.0.0", port=3004, debug=False, allow_unsafe_werkzeug=True)
 #------------------------------------------------------------------------------#

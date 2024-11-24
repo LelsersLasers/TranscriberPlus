@@ -19,22 +19,16 @@ RUN dnf install -y \
 	sqlite \
     && dnf clean all
 
-# Set the working directory for the backend
-WORKDIR /app/backend
-
-# Copy backend files
-COPY backend/ /app/backend/
-
 # Install Python dependencies
 RUN python3 -m pip install flask flask_cors flask_socketio openai-whisper
 
-# Set the working directory for the frontend
+# Set up backend
+WORKDIR /app/backend
+COPY backend/ /app/backend/
+
+# Set up frontend
 WORKDIR /app/frontend
-
-# Copy frontend files
 COPY frontend/ /app/frontend/
-
-# Install Node.js dependencies and build the frontend
 RUN npm install -g rollup \
     && npm install \
     && npm run build
@@ -42,8 +36,6 @@ RUN npm install -g rollup \
 # Expose the port Flask will run on
 EXPOSE 3004
 
-# Set the working directory back to the backend
-WORKDIR /app/backend
 
-# Command to start the Flask app
+WORKDIR /app/backend
 CMD ["python3", "main.py"]
