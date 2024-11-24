@@ -35,19 +35,9 @@ WORKDIR /app/frontend
 COPY frontend/ /app/frontend/
 
 # Install Node.js dependencies and build the frontend
-# RUN npm install -g rollup \
-#     && npm install \
-#     && npm run build
-
-RUN npm install -g rollup
-RUN npm install
-
-RUN ls -la
-
-RUN npm list rollup-plugin-svelte
-
-RUN npm run build
-
+RUN npm install -g rollup \
+    && npm install \
+    && npm run build
 
 # Expose the port Flask will run on
 EXPOSE 3004
