@@ -18,11 +18,11 @@
 	let results = [];
 	let selected = null;
 
-	let loading = false;
+	let loading = true;
 
 	let copy = "Copy";
-
-	function copyText(text) {
+	function copyText(base) {
+		const text = results.find((result) => result.base == base).text;
 		navigator.clipboard.writeText(text);
 		copy = "Copied!";
 		setTimeout(() => {
@@ -30,14 +30,44 @@
 		}, 3000);
 	}
 
+	let share = "Share";
+	function shareText(base) {
+		const text = window.location.origin + "/" + base;
+		navigator.clipboard.writeText(text);
+		share = "Link copied!";
+		setTimeout(() => {
+			share = "Share";
+		}, 3000);
+	}
+
+	let firstUpdate = true;
 	document.addEventListener('DOMContentLoaded', () => {
 		const socket = io();
 
 		socket.on('update', (data) => {
 			results = data["transcriptions"];
 			console.log(results);
+			if (firstUpdate) {
+				loading = false;
+				const path = window.location.pathname;
+				if (path != "/") {
+					const base = path.split("/").pop();
+					const success = resultClick(base);
+					if (!success) {
+						window.location.href = "/";
+					}
+				}
+				firstUpdate = false;
+			}
 		});
 	});
+
+	function restPath() {
+		const path = window.location.pathname;
+		if (path != "/") {
+			window.location.href = "/";
+		}
+	}
 
 	let file;
 
@@ -155,10 +185,13 @@
 	}
 
 	function resultClick(base) {
-		if (results.find((result) => result.base === base).state == TRANSCRIPTION_STATE_TRANSCRIBED) {
+		const result = results.find((result) => result.base === base);
+		if (result && result.state == TRANSCRIPTION_STATE_TRANSCRIBED) {
 			selected = base;
 			showTextModal = true;
+			return true;
 		}
+		return false;
 	}
 </script>
 
@@ -231,8 +264,15 @@ button {
 	font-weight: 400;
 	font-style: normal;
 	background-color: #f5c2e7;
-	display: block;
 	font-size: 1em;
+	width: calc((100% - 25% - 1em) / 2);
+}
+
+.result-button-holder {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
 }
 
 input {
@@ -396,12 +436,11 @@ select {
 		{/if}
 	{/if}
 
-	<div class="flex-center">
-		<button class="copy" type="button" on:click={() => copyText(results.find((result) => result.base === selected).text)}>{copy}</button>
+	<div class="result-button-holder">
+		<button class="copy" type="button" on:click={() => copyText(selected)}>{copy}</button>
+		<button class="copy" type="button" on:click={() => shareText(selected)}>{share}</button>
+		<button class="back" type="button" on:click={() => { showTextModal = false; restPath(); }}>Back</button>
 	</div>
-
-	<button class="back" type="button" on:click={() => showTextModal = false}>Back</button>
-	<br />
 </AltModal>
 
 
