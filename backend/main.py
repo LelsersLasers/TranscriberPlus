@@ -12,7 +12,6 @@ import util
 import threading
 
 import sql
-import sqlite3
 
 from transcription import Transcription, TranscriptionState
 #------------------------------------------------------------------------------#
