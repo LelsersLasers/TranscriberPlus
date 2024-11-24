@@ -238,7 +238,7 @@ select {
 }
 
 .v-stack {
-	width: 100%;
+	width: 80%;
 	margin-left: 1em;
 }
 
@@ -251,6 +251,11 @@ select {
 .result-name {
 	font-size: 1.2em;
 	font-weight: 800;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	width: 100%;
 }
 
 .result-status {
