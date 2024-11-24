@@ -2,6 +2,8 @@ import os
 import sqlite3
 from transcription import Transcription, TranscriptionState
 
+import contextlib
+
 
 CREATE_TABLES = """
 CREATE TABLE IF NOT EXISTS transcriptions (
@@ -16,6 +18,15 @@ CREATE TABLE IF NOT EXISTS transcriptions (
 	with_timestamps TEXT
 );
 """
+
+@contextlib.contextmanager
+def get_db(database: str):
+    db = sqlite3.connect(database, detect_types=sqlite3.PARSE_DECLTYPES)
+    db.row_factory = sqlite3.Row
+    try:
+        yield db
+    finally:
+        db.close()
 
 def make_table(db: sqlite3.Connection):
 	db.executescript(CREATE_TABLES)
