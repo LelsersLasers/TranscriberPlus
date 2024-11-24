@@ -171,6 +171,7 @@
 	font-weight: 400;
 	font-style: normal;
 	font-size: 1em;
+	border: none;
 }
 
 #start {
