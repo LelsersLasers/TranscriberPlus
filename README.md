@@ -11,7 +11,7 @@ Project page: [https://lelserslasers.itch.io/transcriber-plus](https://lelsersla
 - Backend
 	- Python, Flask, Flask-SocketIO
 	- Whisper (OpenAI)
-	- SQlite
+	- SQLite
 - Deployment
 	- Docker
 
