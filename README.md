@@ -7,6 +7,7 @@ Project page: [https://lelserslasers.itch.io/transcriber-plus](https://lelsersla
 ## Tech Stack
 - Frontend
 	- Svelte
+	- Rollup
 - Backend
 	- Python, Flask, Flask-SocketIO
 	- Whisper (OpenAI)
