@@ -2,9 +2,7 @@
 
 ## TODO
 
-- Increase server swap
 - Multi*processing* instead of multi*threading*
-- Test new start vs upload system
 
 ## Tech Stack
 - Frontend
