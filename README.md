@@ -2,10 +2,6 @@
 
 Project page: [https://lelserslasers.itch.io/transcriber-plus](https://lelserslasers.itch.io/transcriber-plus)
 
-## TODO
-
-- Multi*processing* instead of multi*threading*
-
 ![Showcase2](./showcase/2.png)
 
 ## Tech Stack
