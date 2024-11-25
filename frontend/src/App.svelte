@@ -84,11 +84,12 @@
 						alert(data["error"]);
 					}
 				})
-				.catch(() => {
+				.catch((e) => {
+					console.error("Error deleting file:", e);
 					loading = false;
 				});
-		} catch (error) {
-			console.error("Error deleting file:", error);
+		} catch (e) {
+			console.error("Error deleting file:", e);
 			loading = false;
 		}
 	}
@@ -141,19 +142,18 @@
             return;
         }
 
-        const formData = new FormData();
-        formData.append("file", file);
-		formData.append("language", language);
-		formData.append("model", model);
+		showStartModal = false;
 
 		document.getElementById("fileInput").value = "";
 		document.getElementById("fileNameDisplay").textContent = "No file chosen";
 
-		showStartModal = false;
-
         try {
 			loading = true;
-			fetch(api + "/upload/", {
+
+			const formData = new FormData();
+			formData.append("filename", file.name);
+
+			fetch(api + "/start/", {
 				method: "POST",
 				body: formData,
 			})
@@ -162,15 +162,51 @@
 					loading = false;
 					if (data["error"]) {
 						alert(data["error"]);
+					} else {
+						const base = data["base"];
+						upload(base);
 					}
 				})
-				.catch(() => {
+				.catch((e) => {
+					console.error("Error starting transcription:", e);
 					loading = false;
 				});
-        } catch (error) {
-            console.error("Error uploading file:", error);
+        } catch (e) {
+            console.error("Error starting transcription:", e);
+			loading = false;
         }
     }
+
+	function upload(base) {
+        if (!file) {
+            alert("Please select a file.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+		formData.append("base", base);
+		formData.append("language", language);
+		formData.append("model", model);
+
+        try {
+			fetch(api + "/upload/", {
+				method: "POST",
+				body: formData,
+			})
+				.then((res) => res.json())
+				.then((data) => {
+					if (data["error"]) {
+						alert(data["error"]);
+					}
+				})
+				.catch((e) => {
+					console.error("Error uploading file:", e);
+				});
+        } catch (e) {
+            console.error("Error uploading file:", e);
+        }
+	}
 
 	function stateToColor(state) {
 		switch (state) {

@@ -15,7 +15,7 @@ class TranscriptionState:
 		if state == TranscriptionState.ERROR:
 			return "Error! (Invalid file or a problem occurred.)"
 		elif state == TranscriptionState.INIT:
-			return "Pending..."
+			return "Downloading..."
 		elif state == TranscriptionState.DOWNLOADED:
 			return "Downloaded"
 		elif state == TranscriptionState.CONVERTING:
@@ -28,12 +28,12 @@ class TranscriptionState:
 			return "Done!"
 
 class Transcription:
-	def __init__(self, filename: str, model: str, language: str):
-		self.model = model
-		self.language = language
-
+	def __init__(self, filename: str):
 		self.original_filename = filename
 		self.extension = util.get_file_extension(filename)
+
+		self.model = ""
+		self.language = ""
 
 		self.base = uuid.uuid4().hex
 		self.state = TranscriptionState.INIT
@@ -43,8 +43,10 @@ class Transcription:
 
 	@classmethod
 	def from_dict(cls, d: dict)-> 'Transcription':
-		t = cls(d["original_filename"], d["model"], d["language"])
+		t = cls(d["original_filename"])
 		t.extension = d["extension"]
+		t.model = d["model"]
+		t.language = d["language"]
 		t.base = d["base"]
 		t.state = d["state"]
 		t.text = d["text"]

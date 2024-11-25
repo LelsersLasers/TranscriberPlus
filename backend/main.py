@@ -237,7 +237,9 @@ def emit_update():
 @app.route('/<path:path>')
 def serve(path):
 	if path and os.path.exists(os.path.join(app.static_folder, path)):
+		print(path)
 		return flask.send_from_directory(app.static_folder, path)
+	print("index.html")
 	return flask.send_from_directory(app.static_folder, 'index.html')
 
 @sio.on("connect")
@@ -246,7 +248,7 @@ def connect():
 
 @app.route("/delete/<base>", methods=["DELETE"])
 def delete(base):
-	print("/Delete")
+	print("/delete")
 
 	with sql.get_db(DATABASE) as db:
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
@@ -272,22 +274,16 @@ def delete(base):
 	return flask.jsonify({"error": "Cannot delete or cancel transcription in this state"})
 
 
-@app.route("/upload/", methods=["POST"])
-def upload():
-	print("/Upload")
+@app.route("/start/", methods=["POST"])
+def start():
+	print("/start")
 
-	file = flask.request.files["file"]
+	filename = flask.request.form.get("filename")
 
-	model = flask.request.form.get("model")
-	language = flask.request.form.get("language")
-
-	if not file:
-		return flask.jsonify({"error": "No file provided"})
-	
-	if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
+	if not util.allowed_file(filename, ALLOWED_EXTENSIONS):
 		return flask.jsonify({"error": "Invalid file type. Accepted types: " + ", ".join(ALLOWED_EXTENSIONS)})
-	
-	trans = Transcription(file.filename, model, language)
+
+	trans = Transcription(filename)
 	with sql.get_db(DATABASE) as db:
 		db.execute(
 			"""INSERT INTO transcriptions (base, original_filename, model, language, extension, state, text, with_timestamps)
@@ -297,6 +293,43 @@ def upload():
 		db.commit()
 
 	emit_update()
+
+	return flask.jsonify({
+		"success": True,
+		"base": trans.base
+	})
+
+
+@app.route("/upload/", methods=["POST"])
+def upload():
+	print("/upload")
+
+	file = flask.request.files["file"]
+
+	base = flask.request.form.get("base")
+	model = flask.request.form.get("model")
+	language = flask.request.form.get("language")
+
+	if not file:
+		return flask.jsonify({"error": "No file provided"})
+	
+	if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
+		return flask.jsonify({"error": "Invalid file type. Accepted types: " + ", ".join(ALLOWED_EXTENSIONS)})
+	
+	with sql.get_db(DATABASE) as db:
+		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
+		trans = Transcription.from_dict(dict(cursor.fetchone()))
+
+	trans.model = model
+	trans.language = language
+
+	with sql.get_db(DATABASE) as db:
+		db.execute(
+			"UPDATE transcriptions SET model = ?, language = ? WHERE base = ?",
+			(trans.model, trans.language, trans.base)
+		)
+		db.commit()
+
 
 	download_filename = f"{trans.base}.{util.get_file_extension(file.filename)}"
 	download_filepath = os.path.join(UPLOAD_DIR, download_filename)
