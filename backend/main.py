@@ -1,3 +1,5 @@
+print("Starting...")
+
 import os
 import subprocess
 
