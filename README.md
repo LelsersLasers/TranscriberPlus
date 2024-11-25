@@ -1,8 +1,12 @@
 # Transcriber+
 
+Project page: [https://lelserslasers.itch.io/transcriber-plus](https://lelserslasers.itch.io/transcriber-plus)
+
 ## TODO
 
 - Multi*processing* instead of multi*threading*
+
+![Showcase2](./showcase/2.png)
 
 ## Tech Stack
 - Frontend
@@ -14,5 +18,4 @@
 - Deployment
 	- Docker
 
-![Showcase2](./showcase/2.png)
 ![Showcase1](./showcase/1.png)
