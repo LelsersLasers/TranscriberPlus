@@ -1,0 +1,3 @@
+[submodule "backend/whisper_callback"]
+	path = backend/whisper_callback
+	url = https://github.com/LelsersLasers/whisper_callback.git

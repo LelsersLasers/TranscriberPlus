@@ -8,7 +8,7 @@ import flask_cors # type: ignore[import]
 import flask_socketio # type: ignore[import]
 import logging
 
-import whisper # type: ignore[import]
+import whisper_callback.whisper as whisper
 
 import util
 import threading

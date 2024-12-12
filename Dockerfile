@@ -20,7 +20,8 @@ RUN dnf install -y \
     && dnf clean all
 
 # Install Python dependencies
-RUN python3 -m pip install flask flask_cors flask_socketio openai-whisper
+RUN python3 -m pip install flask flask_cors flask_socketio numba numpy torch tqdm more-itertools tiktoken triton>=2.0.0;platform_machine=="x86_64" and sys_platform=="linux" or sys_platform=="linux2"
+
 
 # Set up backend
 WORKDIR /app/backend
