@@ -104,8 +104,19 @@ def transcribe(base):
 	filepath = os.path.join(UPLOAD_DIR, filename)
 
 	try:
+		def callback(current, total, eta):
+			percent = round(current / total * 100)
+			eta = round(eta)
+			with sql.get_db(DATABASE) as db:
+				db.execute(
+					"UPDATE transcriptions SET percent = ?, eta = ? WHERE base = ?",
+					(percent, eta, base)
+				)
+				db.commit()
+			emit_update()
+
 		model = whisper.load_model(trans.model)
-		result = model.transcribe(filepath, language=trans.language, verbose=False)
+		result = model.transcribe(filepath, language=trans.language, verbose=False, callback=callback)
 
 		os.remove(filepath)
 
@@ -288,8 +299,8 @@ def start():
 	trans = Transcription(filename)
 	with sql.get_db(DATABASE) as db:
 		db.execute(
-			"""INSERT INTO transcriptions (base, original_filename, model, language, extension, state, text, with_timestamps)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+			"""INSERT INTO transcriptions (base, original_filename, model, language, extension, state, text, with_timestamps, percent, eta)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
 			trans.to_values()
 		)
 		db.commit()

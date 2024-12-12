@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS transcriptions (
 	base TEXT,
 	state INTEGER,
 	text TEXT,
-	with_timestamps TEXT
+	with_timestamps TEXT,
+	percent INTEGER,
+	eta INTEGER
 );
 """
 

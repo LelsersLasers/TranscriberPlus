@@ -4,9 +4,10 @@
 
 	export let api;
 
-	const TRANSCRIPTION_STATE_ERROR       = -1;
-	const TRANSCRIPTION_STATE_CONVERTED   = 3;
-	const TRANSCRIPTION_STATE_TRANSCRIBED = 5;
+	const TRANSCRIPTION_STATE_ERROR        = -1;
+	const TRANSCRIPTION_STATE_CONVERTED    = 3;
+	const TRANSCRIPTION_STATE_TRANSCRIBING = 4;
+	const TRANSCRIPTION_STATE_TRANSCRIBED  = 5;
 
 	let showTextModal = false;
 	let showTimestamps = false;
@@ -16,6 +17,7 @@
 	let model = "tiny.en";
 
 	let results = [];
+	let result_keys = {};
 	let selected = null;
 
 	let loading = true;
@@ -46,6 +48,12 @@
 
 		socket.on('update', (data) => {
 			results = data["transcriptions"];
+			for (const result of results) {
+				if (result.state == TRANSCRIPTION_STATE_TRANSCRIBING) {
+					result_keys[result.base] = Math.random();
+				}
+			}
+
 			console.log(results);
 			if (firstUpdate) {
 				loading = false;
@@ -220,6 +228,43 @@
 		}
 	}
 
+	function formatSeconds(seconds) {
+		if (seconds == 0) {
+			return "...";
+		}
+
+		const days = Math.floor(seconds / (3600 * 24));
+		seconds %= (3600 * 24);
+		const hours = Math.floor(seconds / 3600);
+		seconds %= 3600;
+		const minutes = Math.floor(seconds / 60);
+		seconds %= 60;
+
+		let result = [];
+
+		if (days > 0) {
+			result.push(`${days} day${days === 1 ? '' : 's'}`);
+		}
+
+		if (hours > 0) {
+			result.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+		}
+		if (days > 0) return result.join(', ');
+
+
+		if (minutes > 0) {
+			result.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+		}
+		if (hours > 0) return result.join(', ');
+
+		if (seconds > 0 || !result.length) {
+			result.push(`${seconds} second${seconds === 1 ? '' : 's'}`);
+		}
+
+		return result.join(', ');
+	}
+
+
 	function resultClick(base) {
 		const result = results.find((result) => result.base === base);
 		if (result && result.state == TRANSCRIPTION_STATE_TRANSCRIBED) {
@@ -341,6 +386,8 @@ select {
 	margin-bottom: 0.2em;
 	color: #181825;
 
+	transition: background-color 0.3s;
+
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -432,7 +479,13 @@ select {
 				<div class="v-stack">
 					<p class="result-text result-name">{result.original_filename}</p>
 					<br />
-					<p class="result-text result-status">Status: {result.state_str}</p>
+					{#if result.state == TRANSCRIPTION_STATE_TRANSCRIBING}
+						{#key result_keys[result.base]}
+							<p class="result-text result-status">Status: {result.state_str} {result.percent}%, eta {formatSeconds(result.eta)}</p>
+						{/key}
+					{:else}
+						<p class="result-text result-status">Status: {result.state_str}</p>
+					{/if}
 				</div>
 
 				{#if result.state == TRANSCRIPTION_STATE_CONVERTED}
