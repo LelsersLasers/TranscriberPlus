@@ -1,6 +1,6 @@
 <script>
-	import Modal from "./Modal.svelte";
-	import AltModal from "./AltModal.svelte";
+	import SmallModal from "./SmallModal.svelte";
+	import FullScreenModal from "./FullScreenModal.svelte";
 
 	export let api;
 
@@ -500,7 +500,7 @@ select {
 <br />
 
 
-<AltModal bind:showModal={showTextModal}>
+<FullScreenModal bind:showModal={showTextModal}>
 	{#if selected}
 		<h1 class="modal-header">{results.find((result) => result.base === selected).original_filename}</h1>
 	{/if}
@@ -522,10 +522,10 @@ select {
 		<button class="copy" type="button" on:click={() => shareText(selected)}>{share}</button>
 		<button class="back" type="button" on:click={() => { showTextModal = false; restPath(); }}>Back</button>
 	</div>
-</AltModal>
+</FullScreenModal>
 
 
-<Modal bind:showModal={showStartModal}>
+<SmallModal bind:showModal={showStartModal}>
 	<h1 class="modal-header">Upload</h1>
 	<form on:submit|preventDefault={start}>
 		<div style="display: inline-flex; align-items: center; gap: 0.2em; cursor: pointer; margin-bottom: 0.4em;">
@@ -638,4 +638,4 @@ select {
 		<button id="start" type="submit">Start</button>
 		<button class="back" type="button" on:click={() => showStartModal = false}>Back</button>
 	</form>
-</Modal>
+</SmallModal>
