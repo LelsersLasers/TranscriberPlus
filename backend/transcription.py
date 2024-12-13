@@ -28,6 +28,8 @@ class TranscriptionState:
         elif state == TranscriptionState.TRANSCRIBED:
             return "Done!"
 
+class TranscriptionDeletedError(Exception):
+    pass    
 
 class Transcription:
     def __init__(self, filename: str):

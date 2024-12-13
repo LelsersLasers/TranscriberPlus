@@ -488,7 +488,7 @@ select {
 					{/if}
 				</div>
 
-				{#if result.state == TRANSCRIPTION_STATE_CONVERTED}
+				{#if result.state == TRANSCRIPTION_STATE_CONVERTED || result.state == TRANSCRIPTION_STATE_TRANSCRIBING}
 					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Cancel</button>
 				{:else if result.state == TRANSCRIPTION_STATE_TRANSCRIBED || result.state == TRANSCRIPTION_STATE_ERROR}
 					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Delete</button>

@@ -15,7 +15,7 @@ import threading
 
 import sql
 
-from transcription import Transcription, TranscriptionState
+from transcription import Transcription, TranscriptionState, TranscriptionDeletedError
 #------------------------------------------------------------------------------#
 
 
@@ -105,6 +105,17 @@ def transcribe(base):
 
 	try:
 		def callback(current, total, eta):
+			with sql.get_db(DATABASE) as db:
+				cursor = db.execute("SELECT COUNT(*) FROM transcriptions WHERE base = ?", (base,))
+				count = cursor.fetchone()[0]
+			
+			if count == 0:
+				try:
+					os.remove(filepath)
+				except FileNotFoundError:
+					print(f"File not found: {filepath}")
+				raise TranscriptionDeletedError()
+			
 			percent = round(current / total * 100)
 			eta = round(eta)
 			with sql.get_db(DATABASE) as db:
@@ -134,6 +145,8 @@ def transcribe(base):
 				(trans.state, trans.text, trans.with_timestamps, trans.base)
 			)
 			db.commit()
+	except TranscriptionDeletedError:
+		pass
 	except Exception as e:
 		print(f"Error transcribing {filename}: {e}")
 
@@ -267,7 +280,12 @@ def delete(base):
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
 		trans = Transcription.from_dict(dict(cursor.fetchone()))
 	
-	if trans.state in [TranscriptionState.ERROR, TranscriptionState.CONVERTED, TranscriptionState.TRANSCRIBED]:
+	if trans.state in [
+		TranscriptionState.ERROR,
+		TranscriptionState.CONVERTED,
+		TranscriptionState.TRANSCRIBING,
+		TranscriptionState.TRANSCRIBED
+	]:
 		with sql.get_db(DATABASE) as db:
 			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
 			db.commit()
