@@ -17,7 +17,6 @@
 	let model = "tiny.en";
 
 	let results = [];
-	let result_keys = {};
 	let selected = null;
 
 	let loading = true;
@@ -48,11 +47,6 @@
 
 		socket.on('update', (data) => {
 			results = data["transcriptions"];
-			for (const result of results) {
-				if (result.state == TRANSCRIPTION_STATE_TRANSCRIBING) {
-					result_keys[result.base] = Math.random();
-				}
-			}
 
 			console.log(results);
 			if (firstUpdate) {
@@ -480,9 +474,7 @@ select {
 					<p class="result-text result-name">{result.original_filename}</p>
 					<br />
 					{#if result.state == TRANSCRIPTION_STATE_TRANSCRIBING}
-						{#key result_keys[result.base]}
-							<p class="result-text result-status">Status: {result.state_str} {result.percent}%, eta {formatSeconds(result.eta)}</p>
-						{/key}
+						<p class="result-text result-status">Status: {result.state_str} {result.percent}%, eta {formatSeconds(result.eta)}</p>
 					{:else}
 						<p class="result-text result-status">Status: {result.state_str}</p>
 					{/if}
