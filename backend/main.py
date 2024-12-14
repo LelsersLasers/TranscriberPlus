@@ -282,6 +282,8 @@ def full(base):
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
 		trans = dict(cursor.fetchone())
 
+	trans["state_str"] = TranscriptionState.to_str(trans["state"])
+
 	return flask.jsonify(trans)
 
 @app.route("/delete/<base>", methods=["DELETE"])
