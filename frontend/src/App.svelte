@@ -16,14 +16,14 @@
 	let language = "en";
 	let model = "tiny.en";
 
-	let results = [];
+	let results = {};
 	let selected = null;
 
 	let loading = true;
 
 	let copy = "Copy";
 	function copyText(base) {
-		const text = results.find((result) => result.base == base).text;
+		const text = results[base].text;
 		navigator.clipboard.writeText(text);
 		copy = "Copied!";
 		setTimeout(() => {
@@ -46,9 +46,17 @@
 		const socket = io();
 
 		socket.on('update', (data) => {
+			// results = data["transcriptions"];
+			const oldResults = results;
 			results = data["transcriptions"];
 
-			console.log(results);
+			for (let base in results) {
+				if (oldResults[base] && results[base] && oldResults[base].text && !results[base].text) {
+					results[base].text = oldResults[base].text;
+					results[base].with_timestamps = oldResults[base].with_timestamps;
+				}
+			}
+
 			if (firstUpdate) {
 				loading = false;
 				const path = window.location.pathname;
@@ -260,18 +268,17 @@
 
 
 	function resultClick(base) {
-		const result = results.find((result) => result.base === base);
+		const result = results[base];
 		if (result && result.state == TRANSCRIPTION_STATE_TRANSCRIBED) {
 			selected = base;
-			if (!results.find((result) => result.base === base).text) {
+			if (!results[base].text) {
 				try {
 					loading = true;
 					fetch(api + "/full/" + base)
 						.then((res) => res.json())
 						.then((data) => {
 							loading = false;
-							const index = results.findIndex((result) => result.base === base);
-							results[index] = data;
+							results[base] = data;
 						})
 						.catch((e) => {
 							console.error("Error getting full transcription:", e);
@@ -486,7 +493,7 @@ select {
 			<button id="new-transcription" on:click={() => showStartModal = true}>New Transcription</button>
 		</div>
 
-		{#each results as result (result.base)}
+		{#each Object.values(results) as result (result.base)}
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
 			<div class="{result.state == TRANSCRIPTION_STATE_TRANSCRIBED ? 'result pointer' : 'result' }" style="background-color: {stateToColor(result.state)}" on:click={() => {resultClick(result.base)}}>
 				<div class="v-stack">
@@ -507,7 +514,7 @@ select {
 			</div>
 		{/each}
 
-		{#if results.length == 0}
+		{#if Object.keys(results).length == 0}
 			<div class="flex-center">
 				<p id="no-transcriptions">No transcriptions yet!</p>
 			</div>
@@ -521,7 +528,7 @@ select {
 
 <FullScreenModal bind:showModal={showTextModal}>
 	{#if selected}
-		<h1 class="modal-header">{results.find((result) => result.base === selected).original_filename}</h1>
+		<h1 class="modal-header">{results[selected]?.original_filename}</h1>
 	{/if}
 
 	<input type="checkbox" id="showTimestamps" on:change={() => showTimestamps = document.getElementById("showTimestamps").checked} />
@@ -530,9 +537,9 @@ select {
 	{#if selected}
 		 {#if showTimestamps}
 		 	<br />
-			{@html results.find((result) => result.base === selected).with_timestamps}
+			{@html results[selected]?.with_timestamps}
 		{:else}
-			<p class="bigger-margin-b">{@html results.find((result) => result.base === selected).text}</p>
+			<p class="bigger-margin-b">{@html results[selected]?.text}</p>
 		{/if}
 	{/if}
 

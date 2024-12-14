@@ -251,13 +251,17 @@ def emit_update():
 
 	all = wip + done
 
+	transcriptions = {}
+
 	for trans in all:
 		trans["state_str"] = TranscriptionState.to_str(trans["state"])
 		del trans["text"]
 		del trans["with_timestamps"]
 
+		transcriptions[trans["base"]] = trans
+
 	sio.emit("update", {
-		"transcriptions": all
+		"transcriptions": transcriptions
 	})
 
 
