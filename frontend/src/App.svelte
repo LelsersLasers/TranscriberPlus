@@ -41,6 +41,10 @@
 		}, 3000);
 	}
 
+	function updateURL(url) {
+		window.history.pushState({ path: url }, "", url);
+	}
+
 	let firstUpdate = true;
 	document.addEventListener('DOMContentLoaded', () => {
 		const socket = io();
@@ -64,18 +68,31 @@
 					const base = path.split("/").pop();
 					const success = resultClick(base);
 					if (!success) {
-						window.location.href = "/";
+						updateURL("/");
 					}
 				}
 				firstUpdate = false;
 			}
 		});
+
+		window.onpopstate = function(event) {
+			const path = window.location.pathname;
+			if (path == "/") {
+				showTextModal = false;
+			} else {
+				const base = path.split("/").pop();
+				const success = resultClick(base);
+				if (!success) {
+					updateURL("/");
+				}
+			}
+		};
 	});
 
 	function restPath() {
 		const path = window.location.pathname;
 		if (path != "/") {
-			window.location.href = "/";
+			updateURL("/");
 		}
 	}
 
@@ -266,7 +283,6 @@
 		return result.join(', ');
 	}
 
-
 	function resultClick(base) {
 		const result = results[base];
 		if (result && result.state == TRANSCRIPTION_STATE_TRANSCRIBED) {
@@ -289,6 +305,9 @@
 					loading = false;
 				}
 			}
+
+			updateURL("/" + base);
+
 			showTextModal = true;
 			return true;
 		}
@@ -535,11 +554,15 @@ select {
 	<label for="showTimestamps">Show timestamps</label>
 
 	{#if selected}
-		 {#if showTimestamps}
-		 	<br />
-			{@html results[selected]?.with_timestamps}
+		{#if results[selected].text}
+			{#if showTimestamps}
+				<br />
+				{@html results[selected]?.with_timestamps}
+			{:else}
+				<p class="bigger-margin-b">{@html results[selected]?.text}</p>
+			{/if}
 		{:else}
-			<p class="bigger-margin-b">{@html results[selected]?.text}</p>
+			<p>Loading...</p>
 		{/if}
 	{/if}
 
