@@ -253,6 +253,8 @@ def emit_update():
 
 	for trans in all:
 		trans["state_str"] = TranscriptionState.to_str(trans["state"])
+		del trans["text"]
+		del trans["with_timestamps"]
 
 	sio.emit("update", {
 		"transcriptions": all
@@ -271,6 +273,16 @@ def serve(path):
 @sio.on("connect")
 def connect():
 	emit_update()
+
+@app.route("/full/<base>", methods=["GET"])
+def full(base):
+	print("/full")
+
+	with sql.get_db(DATABASE) as db:
+		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
+		trans = dict(cursor.fetchone())
+
+	return flask.jsonify(trans)
 
 @app.route("/delete/<base>", methods=["DELETE"])
 def delete(base):

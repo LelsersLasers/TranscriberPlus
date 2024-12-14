@@ -263,6 +263,25 @@
 		const result = results.find((result) => result.base === base);
 		if (result && result.state == TRANSCRIPTION_STATE_TRANSCRIBED) {
 			selected = base;
+			if (!results.find((result) => result.base === base).text) {
+				try {
+					loading = true;
+					fetch(api + "/full/" + base)
+						.then((res) => res.json())
+						.then((data) => {
+							loading = false;
+							const index = results.findIndex((result) => result.base === base);
+							results[index] = data;
+						})
+						.catch((e) => {
+							console.error("Error getting full transcription:", e);
+							loading = false;
+						});
+				} catch (e) {
+					console.error("Error getting full transcription:", e);
+					loading = false;
+				}
+			}
 			showTextModal = true;
 			return true;
 		}
