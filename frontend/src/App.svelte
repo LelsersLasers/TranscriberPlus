@@ -295,6 +295,9 @@
 						.then((data) => {
 							loading = false;
 							results[base] = data;
+
+							updateURL("/" + base);
+							showTextModal = true;
 						})
 						.catch((e) => {
 							console.error("Error getting full transcription:", e);
@@ -304,11 +307,10 @@
 					console.error("Error getting full transcription:", e);
 					loading = false;
 				}
+			} else {
+				updateURL("/" + base);
+				showTextModal = true;
 			}
-
-			updateURL("/" + base);
-
-			showTextModal = true;
 			return true;
 		}
 		return false;
@@ -475,7 +477,6 @@ select {
 	cursor: pointer;
 }
 
-/* HTML: <div class="loader"></div> */
 .loader {
 	width: fit-content;
 
