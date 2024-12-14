@@ -1,6 +1,6 @@
 # Transcriber+
 
-Project page: [https://lelserslasers.itch.io/transcriber-plus](https://lelserslasers.itch.io/transcriber-plus)
+Project page: [lelserslasers.itch.io/transcriber-plus](https://lelserslasers.itch.io/transcriber-plus)
 
 ![Showcase2](./showcase/2.png)
 
