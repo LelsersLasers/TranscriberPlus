@@ -6,7 +6,7 @@ Project page: [https://lelserslasers.itch.io/transcriber-plus](https://lelsersla
 
 ## Tech Stack
 - Transcription
-	- Personal fork of OpenAI's Whisper model: [https://github.com/LelsersLasers/whisper_callback](LelsersLasers/whisper_callback)
+	- Personal fork of OpenAI's Whisper model: [LelsersLasers/whisper_callback](https://github.com/LelsersLasers/whisper_callback)
 - Backend
 	- Python, Flask, Flask-SocketIO	
 	- SQLite
