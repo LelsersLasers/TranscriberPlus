@@ -554,7 +554,7 @@ select {
 	<label for="showTimestamps">Show timestamps</label>
 
 	{#if selected}
-		{#if results[selected].text}
+		{#if results[selected] && results[selected].text}
 			{#if showTimestamps}
 				<br />
 				{@html results[selected]?.with_timestamps}
