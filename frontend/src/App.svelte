@@ -24,7 +24,7 @@
 	let copy = "Copy";
 	function copyText(base) {
 		const text = results[base].text;
-		navigator.clipboard.writeText(text);
+		copyTextToClipboard(text);
 		copy = "Copied!";
 		setTimeout(() => {
 			copy = "Copy";
@@ -34,11 +34,32 @@
 	let share = "Share";
 	function shareText(base) {
 		const text = window.location.origin + "/" + base;
-		navigator.clipboard.writeText(text);
+		copyTextToClipboard(text);
 		share = "Link copied!";
 		setTimeout(() => {
 			share = "Share";
 		}, 3000);
+	}
+
+	function copyTextToClipboard(text) {
+		const textArea = document.createElement("textarea");
+		textArea.value = text;
+		document.body.appendChild(textArea);
+		textArea.focus();
+		textArea.select();
+
+		try {
+			const successful = document.execCommand('copy');
+			if (successful) {
+				console.log('Copied successfully');
+			} else {
+				console.log('Failed to copy');
+			}
+		} catch (err) {
+			console.error('Unable to copy', err);
+		}
+
+		document.body.removeChild(textArea);
 	}
 
 	function updateURL(url) {
@@ -50,7 +71,6 @@
 		const socket = io();
 
 		socket.on('update', (data) => {
-			// results = data["transcriptions"];
 			const oldResults = results;
 			results = data["transcriptions"];
 
@@ -75,7 +95,7 @@
 			}
 		});
 
-		window.onpopstate = function(event) {
+		window.onpopstate = function(_e) {
 			const path = window.location.pathname;
 			if (path == "/") {
 				showTextModal = false;
