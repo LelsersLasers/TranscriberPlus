@@ -41,6 +41,7 @@ def reset_in_progress(db: sqlite3.Connection, upload_dir: str):
 	cursor = db.execute("SELECT * FROM transcriptions WHERE state = ?", (TranscriptionState.CONVERTING,))
 	transcriptions = [Transcription.from_dict(dict(row)) for row in cursor.fetchall()]
 
+	print("Deleting partially converted files:")
 	for trans in transcriptions: print(trans.to_values())
 
 	for trans in transcriptions:
@@ -54,6 +55,23 @@ def reset_in_progress(db: sqlite3.Connection, upload_dir: str):
 		except FileNotFoundError:
 			print(f"File not found: {filepath}")
 
+	# INIT -> deleted
+	cursor = db.execute("SELECT * FROM transcriptions WHERE state = ?", (TranscriptionState.INIT,))
+	transcriptions = [Transcription.from_dict(dict(row)) for row in cursor.fetchall()]
+
+	print("Deleting partially downloaded files:")
+	for trans in transcriptions:
+		filepath = os.path.join(upload_dir, trans.original_filename)
+
+		print(f"Deleting {filepath}")
+		try:
+			os.remove(filepath)
+		except FileNotFoundError:
+			print(f"File not found: {filepath}")
+
+	db.execute("DELETE FROM transcriptions WHERE state = ?", (TranscriptionState.INIT,))
+
+		
 	# CONVERTING -> DOWNLOADED
 	db.execute("UPDATE transcriptions SET state = ? WHERE state = ?", (TranscriptionState.DOWNLOADED, TranscriptionState.CONVERTING))
 	db.commit()
