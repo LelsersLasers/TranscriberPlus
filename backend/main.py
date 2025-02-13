@@ -300,6 +300,7 @@ def delete(base):
 	
 	if trans.state in [
 		TranscriptionState.ERROR,
+		TranscriptionState.INIT,
 		TranscriptionState.CONVERTED,
 		TranscriptionState.TRANSCRIBING,
 		TranscriptionState.TRANSCRIBED
