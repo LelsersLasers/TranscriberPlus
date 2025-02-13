@@ -362,12 +362,11 @@ def upload():
 	try:
 		file = flask.request.files["file"]
 		print("Received file")
-	except (ConnectionResetError, BrokenPipeError):
-		print("Connection reset by peer")
-		return flask.jsonify({"error": "Connection reset by peer"})
 	except Exception as e:
-		print("Error:", e)
-		return flask.jsonify({"error": str(e)})
+		with sql.get_db(DATABASE) as db:
+			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
+			db.commit()
+		return flask.jsonify({"error": f"Upload failed: {e}"})
 
 	base = flask.request.form.get("base")
 	model = flask.request.form.get("model")
