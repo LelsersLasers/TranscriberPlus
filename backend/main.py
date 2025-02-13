@@ -372,6 +372,11 @@ def upload():
 	model = flask.request.form.get("model")
 	language = flask.request.form.get("language")
 
+	with sql.get_db(DATABASE) as db:
+		cursor = db.execute("SELECT COUNT(*) FROM transcriptions WHERE base = ?", (base,))
+		count = cursor.fetchone()[0]
+		if count == 0:
+			return flask.jsonify({"error": "Transcription not found"})
 	
 	with sql.get_db(DATABASE) as db:
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
