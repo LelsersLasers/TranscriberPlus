@@ -16,7 +16,7 @@ class TranscriptionState:
         if state == TranscriptionState.ERROR:
             return "Error! (Invalid file or a problem occurred.)"
         elif state == TranscriptionState.INIT:
-            return "Downloading..."
+            return "Uploading..."
         elif state == TranscriptionState.DOWNLOADED:
             return "Downloaded"
         elif state == TranscriptionState.CONVERTING:
