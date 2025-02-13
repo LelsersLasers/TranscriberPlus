@@ -300,6 +300,7 @@ def delete(base):
 	
 	if trans.state in [
 		TranscriptionState.ERROR,
+		TranscriptionState.INIT,
 		TranscriptionState.CONVERTED,
 		TranscriptionState.TRANSCRIBING,
 		TranscriptionState.TRANSCRIBED
@@ -353,17 +354,31 @@ def start():
 def upload():
 	print("/upload")
 
-	file = flask.request.files["file"]
-
-	base = flask.request.form.get("base")
-	model = flask.request.form.get("model")
-	language = flask.request.form.get("language")
-
+	try:
+		file = flask.request.files["file"]
+		print("Received file")
+	except Exception as e:
+		print(f"Invalid file or a problem occurred: {e}")
+		with sql.get_db(DATABASE) as db:
+			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
+			db.commit()
+		return flask.jsonify({"error": f"Upload failed: {e}"})
+	
 	if not file:
 		return flask.jsonify({"error": "No file provided"})
 	
 	if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
 		return flask.jsonify({"error": "Invalid file type. Accepted types: " + ", ".join(ALLOWED_EXTENSIONS)})
+
+	base = flask.request.form.get("base")
+	model = flask.request.form.get("model")
+	language = flask.request.form.get("language")
+
+	with sql.get_db(DATABASE) as db:
+		cursor = db.execute("SELECT COUNT(*) FROM transcriptions WHERE base = ?", (base,))
+		count = cursor.fetchone()[0]
+		if count == 0:
+			return flask.jsonify({"error": "Transcription not found"})
 	
 	with sql.get_db(DATABASE) as db:
 		cursor = db.execute("SELECT * FROM transcriptions WHERE base = ?", (base,))
