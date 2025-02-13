@@ -359,6 +359,7 @@ def upload():
 		print("Received file")
 	except Exception as e:
 		print(f"Invalid file or a problem occurred: {e}")
+		base = flask.request.form.get("base")
 		with sql.get_db(DATABASE) as db:
 			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
 			db.commit()
