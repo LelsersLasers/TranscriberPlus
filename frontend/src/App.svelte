@@ -5,6 +5,7 @@
 	export let api;
 
 	const TRANSCRIPTION_STATE_ERROR        = -1;
+	const TRANSCRIPTION_STATE_INIT         = 0;
 	const TRANSCRIPTION_STATE_CONVERTED    = 3;
 	const TRANSCRIPTION_STATE_TRANSCRIBING = 4;
 	const TRANSCRIPTION_STATE_TRANSCRIBED  = 5;
@@ -546,7 +547,7 @@ select {
 					{/if}
 				</div>
 
-				{#if result.state == TRANSCRIPTION_STATE_CONVERTED || result.state == TRANSCRIPTION_STATE_TRANSCRIBING}
+				{#if result.state == TRANSCRIPTION_STATE_INIT || result.state == TRANSCRIPTION_STATE_CONVERTED || result.state == TRANSCRIPTION_STATE_TRANSCRIBING}
 					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Cancel</button>
 				{:else if result.state == TRANSCRIPTION_STATE_TRANSCRIBED || result.state == TRANSCRIPTION_STATE_ERROR}
 					<button class="result-button" on:click|stopPropagation={() => deleteFile(result.base)}>Delete</button>
