@@ -354,12 +354,6 @@ def start():
 def upload():
 	print("/upload")
 
-	if "file" not in flask.request.files:
-		return flask.jsonify({"error": "No file provided"})
-	
-	if not util.allowed_file(flask.request.files["file"].filename, ALLOWED_EXTENSIONS):
-		return flask.jsonify({"error": "Invalid file type. Accepted types: " + ", ".join(ALLOWED_EXTENSIONS)})
-
 	try:
 		file = flask.request.files["file"]
 		print("Received file")
@@ -369,6 +363,12 @@ def upload():
 			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
 			db.commit()
 		return flask.jsonify({"error": f"Upload failed: {e}"})
+	
+	if not file:
+		return flask.jsonify({"error": "No file provided"})
+	
+	if not util.allowed_file(file.filename, ALLOWED_EXTENSIONS):
+		return flask.jsonify({"error": "Invalid file type. Accepted types: " + ", ".join(ALLOWED_EXTENSIONS)})
 
 	base = flask.request.form.get("base")
 	model = flask.request.form.get("model")
