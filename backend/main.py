@@ -363,6 +363,7 @@ def upload():
 		with sql.get_db(DATABASE) as db:
 			db.execute("DELETE FROM transcriptions WHERE base = ?", (base,))
 			db.commit()
+		emit_update()
 		return flask.jsonify({"error": f"Upload failed: {e}"})
 	
 	if not file:
